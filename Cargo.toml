@@ -6,9 +6,11 @@ edition = "2021"
 [lib]
 name = "aoc2022"
 path = "core/lib.rs"
+crate-type = ["cdylib"]
 
 [[bin]]
-name = "aoc2022"
+name = "aoc2022bin"
 path = "core/main.rs"
 
 [dependencies]
+wasm-bindgen = "0.2"
