@@ -1,0 +1,19 @@
+{
+    "name": "aoc2022",
+    "version": "1.0.0",
+    "description": "Solutions for Advent of Code 2022 in Rust with a complementary web runner.",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/sanraith/aoc2022.git"
+    },
+    "author": "Soma Zsják",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/sanraith/aoc2022/issues"
+    },
+    "homepage": "https://github.com/sanraith/aoc2022#readme"
+}
