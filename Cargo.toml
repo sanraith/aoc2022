@@ -1,11 +1,15 @@
 [package]
-name = "aoc2022_rust"
+name = "aoc2022"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
 name = "aoc2022"
 crate-type = ["lib", "cdylib"]
+
+[[bin]]
+name = "aoc2022_runner"
+path = "src/main.rs"
 
 [dependencies]
 wasm-bindgen = "0.2"
