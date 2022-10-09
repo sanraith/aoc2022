@@ -7,6 +7,5 @@ pub mod solutions;
 
 #[cfg(test)]
 mod tests {
-    mod general_test;
     mod solutions;
 }

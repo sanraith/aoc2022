@@ -12,4 +12,5 @@ name = "aoc2022_runner"
 path = "src/main.rs"
 
 [dependencies]
+regex = "1"
 wasm-bindgen = "0.2"

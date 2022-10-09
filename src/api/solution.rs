@@ -1,3 +1,5 @@
+use regex::Regex;
+
 pub type SolutionResult = Result<String, String>;
 
 pub struct Context<'a> {
@@ -30,6 +32,17 @@ where
     fn new() -> Self {
         Self::default()
     }
+
+    fn day_number(&self) -> Option<u8> {
+        Regex::new(r"(?:::Day)0*(\d+)")
+            .unwrap()
+            .captures(std::any::type_name::<Self>())?
+            .get(1)?
+            .as_str()
+            .parse::<u8>()
+            .ok()
+    }
+
     fn part1(&mut self, ctx: &Context) -> SolutionResult;
     fn part2(&mut self, ctx: &Context) -> SolutionResult;
 }
