@@ -6,35 +6,37 @@ pub enum Part {
 }
 pub use Part::{Part1, Part2};
 
-pub fn assert<T>(part: Part, input: &str, expected: &str)
-where
-    T: Solution,
-{
-    let sut = T::new();
-    let ctx = Context {
-        input: &input,
-        ..Default::default()
-    };
+pub trait TestableSolution {
+    fn assert(&self, part: Part, input: &str, expected: &str);
+}
 
-    let part_num;
-    let result = match part {
-        Part1 => {
-            part_num = 1;
-            sut.part1(&ctx)
-        }
-        Part2 => {
-            part_num = 2;
-            sut.part2(&ctx)
-        }
-    };
+impl<T: Solution> TestableSolution for T {
+    fn assert(&self, part: Part, input: &str, expected: &str) {
+        let ctx = Context {
+            input,
+            ..Default::default()
+        };
 
-    assert_eq!(
-        result.unwrap(),
-        expected,
-        "part {} should return {}",
-        part_num,
-        expected
-    );
+        let part_num;
+        let result = match part {
+            Part1 => {
+                part_num = 1;
+                self.part1(&ctx)
+            }
+            Part2 => {
+                part_num = 2;
+                self.part2(&ctx)
+            }
+        };
+
+        assert_eq!(
+            result.unwrap(),
+            expected,
+            "part {} should return {}",
+            part_num,
+            expected
+        );
+    }
 }
 
 mod day01_test;
