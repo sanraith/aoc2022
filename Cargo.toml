@@ -8,9 +8,11 @@ name = "aoc2022"
 crate-type = ["lib", "cdylib"]
 
 [[bin]]
-name = "aoc2022_runner"
+name = "aoc_cli"
 path = "src/main.rs"
 
 [dependencies]
+clap = { version = "4.0.11", features = ["derive"] }
+clearscreen = { version = "1.0.10", features = ["windows-console"] }
 regex = "1"
 wasm-bindgen = "0.2"
