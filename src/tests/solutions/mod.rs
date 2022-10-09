@@ -7,11 +7,11 @@ pub enum Part {
 pub use Part::{Part1, Part2};
 
 pub trait TestableSolution {
-    fn assert(&self, part: Part, input: &str, expected: &str);
+    fn assert(&mut self, part: Part, input: &str, expected: &str);
 }
 
 impl<T: Solution> TestableSolution for T {
-    fn assert(&self, part: Part, input: &str, expected: &str) {
+    fn assert(&mut self, part: Part, input: &str, expected: &str) {
         let ctx = Context {
             input,
             ..Default::default()

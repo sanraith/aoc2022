@@ -10,7 +10,7 @@ pub fn run_solution() {
             io::stdout().flush().unwrap();
         },
     };
-    let solution = Day01::new();
+    let mut solution = Day01::new();
     let result = solution.part1(&context);
     println!();
 
