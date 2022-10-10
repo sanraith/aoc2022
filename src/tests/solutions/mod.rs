@@ -1,4 +1,4 @@
-use crate::api::solution::*;
+use crate::core::solution::*;
 use regex::Regex;
 
 pub fn setup<T>(input: &str) -> (T, Context)
@@ -28,4 +28,5 @@ where
     return setup::<T>(&input);
 }
 
+// Solution modules
 mod day01_test;

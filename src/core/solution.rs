@@ -10,7 +10,7 @@ pub struct Context {
 impl Default for Context {
     fn default() -> Self {
         Self {
-            raw_input: "".to_owned(),
+            raw_input: Default::default(),
             on_progress: |_| (),
         }
     }
@@ -28,8 +28,8 @@ impl Context {
         input.into()
     }
 
-    /// Parses each line of the input as an item of type T.
-    pub fn input_items<T>(&self) -> Result<Vec<T>, <T as FromStr>::Err>
+    /// Parses each line of the input as a value of type T.
+    pub fn input_values<T>(&self) -> Result<Vec<T>, <T as FromStr>::Err>
     where
         T: FromStr,
     {
@@ -42,10 +42,10 @@ impl Context {
     /// Updates the current progress percentage.
     /// value range: 0..1
     pub fn progress(&self, value: f32) -> Result<(), String> {
-        if value < 0.0 || value > 1.0 {
-            return Err(format!("Invalid progress value: {}", value));
+        match value {
+            v if v >= 0.0 && v <= 1.0 => Ok((self.on_progress)(v)),
+            _ => Err(format!("Invalid progress value: {}", value)),
         }
-        Ok((self.on_progress)(value))
     }
 }
 

@@ -1,5 +1,5 @@
 // Module definitions
-pub mod api {
+pub mod core {
     pub mod cli;
     pub mod js_interop;
     pub mod solution;
@@ -12,5 +12,5 @@ mod tests {
 }
 
 // Re-exports
-pub use api::cli;
-pub use api::solution;
+pub use crate::core::cli;
+pub use crate::core::solution;

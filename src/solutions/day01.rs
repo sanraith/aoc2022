@@ -1,10 +1,10 @@
-use crate::api::solution::*;
+use crate::solution::*;
 
 #[derive(Default)]
 pub struct Day01;
 impl Solution for Day01 {
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
-        let items = ctx.input_items::<i32>()?;
+        let items = ctx.input_values::<i32>()?;
         let count =
             items
                 .iter()
@@ -17,7 +17,7 @@ impl Solution for Day01 {
 
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
         let count = ctx
-            .input_items::<i32>()?
+            .input_values::<i32>()?
             .windows(3)
             .map(|x| x.iter().sum())
             .collect::<Vec<i32>>()
