@@ -1,21 +1,30 @@
 use crate::api::solution::*;
-use std::{thread, time::Duration};
 
 #[derive(Default)]
 pub struct Day01;
 impl Solution for Day01 {
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
-        if ctx.input.len() == 0 {
-            return Err(format!("Length: {}", ctx.input.len()));
-        }
-        for p in 0..=50 {
-            ctx.progress(p as f32 / 50.0)?;
-            thread::sleep(Duration::from_millis(5));
-        }
-        Ok(ctx.input.len().to_string())
+        let items = ctx.input_items::<i32>()?;
+        let count =
+            items
+                .iter()
+                .enumerate()
+                .skip(1)
+                .fold(0, |a, (i, x)| if &items[i - 1] < x { a + 1 } else { a });
+
+        Ok(count.to_string())
     }
 
-    fn part2(&mut self, _ctx: &Context) -> SolutionResult {
-        Ok("*".to_owned())
+    fn part2(&mut self, ctx: &Context) -> SolutionResult {
+        let count = ctx
+            .input_items::<i32>()?
+            .windows(3)
+            .map(|x| x.iter().sum())
+            .collect::<Vec<i32>>()
+            .windows(2)
+            .filter(|&x| x[0] < x[1])
+            .count();
+
+        Ok(count.to_string())
     }
 }

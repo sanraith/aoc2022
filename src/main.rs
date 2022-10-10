@@ -5,8 +5,8 @@ use std::io::{self, Write};
 
 pub fn run_solution() {
     let context = Context {
-        input: "asd",
-        progress: |p| {
+        raw_input: "123\n456\n789".to_owned(),
+        on_progress: |p| {
             print!("\r{:.2}%  ", p * 100.0);
             io::stdout().flush().unwrap();
         },
@@ -29,11 +29,19 @@ fn main() {
                 0 => vec![0], // TODO next available day
                 _ => days,
             };
-            let days_str = days.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ");
+            let days_str = days
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
             println!("Scaffolding days: {}", days_str);
         }
         Some(Command::Solve { days }) => {
-            let days_str = days.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(", ");
+            let days_str = days
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
             println!("Solving days: {}", days_str);
         }
         None => {
