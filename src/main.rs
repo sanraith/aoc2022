@@ -19,7 +19,7 @@ pub fn run_solution() {
 }
 
 fn main() {
-    clearscreen::clear().unwrap();
+    clearscreen::clear().ok();
     println!("--- Advent of Code 2022 CLI by sanraith ---");
 
     let cli = Args::parse();

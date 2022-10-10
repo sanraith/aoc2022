@@ -2,7 +2,7 @@ use super::*;
 use crate::solutions::Day01;
 
 #[test]
-fn test_input() {
+fn example_input() {
     let (mut day, ctx) = setup::<Day01>(
         r#"
 199
@@ -22,5 +22,7 @@ fn test_input() {
 
 #[test]
 fn puzzle_input() {
-    let (mut _day, _ctx) = setup_from_file::<Day01>();
+    let (mut day, ctx) = setup_from_file::<Day01>();
+    assert_eq!(day.part1(&ctx).unwrap(), "1292");
+    assert_eq!(day.part2(&ctx).unwrap(), "1262");
 }

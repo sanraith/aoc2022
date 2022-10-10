@@ -16,7 +16,7 @@ impl Default for Context {
     }
 }
 impl Context {
-    /// Provides a cleaned-up version of raw_input with the following modification:
+    /// Provides a cleaned-up version of raw_input with the following modifications:
     /// - Convert \r\n to \n
     /// - Remove leading and trailing whitespace lines
     pub fn input(&self) -> String {
@@ -59,7 +59,7 @@ where
 
     fn day_str() -> Option<String> {
         Some(
-            Regex::new(r"(?:::Day)0*(\d+)")
+            Regex::new(r"(?:::Day)(\d+)")
                 .unwrap()
                 .captures(std::any::type_name::<Self>())?
                 .get(1)?
