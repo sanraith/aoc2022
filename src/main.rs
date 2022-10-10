@@ -1,9 +1,14 @@
-use aoc2022::{cli::*, solution::*, solutions::*};
+use aoc2022::{
+    cli::*,
+    scaffold::{self, Target},
+    solution::*,
+    solutions::Day01,
+};
 use clap::Parser;
 use clearscreen;
 use std::io::{self, Write};
 
-pub fn run_solution() {
+fn run_solution() {
     let context = Context {
         raw_input: "123\n456\n789".to_owned(),
         on_progress: |p| {
@@ -29,12 +34,7 @@ fn main() {
                 0 => vec![0], // TODO next available day
                 _ => days,
             };
-            let days_str = days
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-            println!("Scaffolding days: {}", days_str);
+            scaffold::scaffold(Target::Days(&days));
         }
         Some(Command::Solve { days }) => {
             let days_str = days

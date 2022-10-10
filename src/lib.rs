@@ -2,6 +2,7 @@
 pub mod core {
     pub mod cli;
     pub mod js_interop;
+    pub mod scaffold;
     pub mod solution;
 }
 pub mod solutions;
@@ -13,4 +14,5 @@ mod tests {
 
 // Re-exports
 pub use crate::core::cli;
+pub use crate::core::scaffold;
 pub use crate::core::solution;

@@ -1,4 +1,8 @@
+
 # --- RUST ---
+# Local cache for scaffolding
+/.cache
+
 # will have compiled files and executables
 /target
 
