@@ -1,5 +1,6 @@
 // Module definitions
 pub mod core {
+    pub mod collect_solutions;
     pub mod js_interop;
     pub mod solution;
     pub mod util;

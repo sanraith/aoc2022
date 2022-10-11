@@ -1,14 +1,9 @@
 use crate::{
     solution::{SolutionStatic, SolutionType},
+    solutions::*,
     util::YearDay,
 };
 use std::collections::HashMap;
-
-// --- Solution modules ---
-mod day01;
-
-// --- Re-exports ---
-pub use day01::Day01;
 
 pub fn get_solution_types() -> HashMap<YearDay, Vec<SolutionType>> {
     let types = [
