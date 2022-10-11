@@ -3,7 +3,7 @@ use regex::Regex;
 
 pub fn setup<T>(input: &str) -> (T, Context)
 where
-    T: Solution + SolutionInfo,
+    T: Solution + SolutionStatic,
 {
     // Remove leading empty lines to be able to format input in tests nicer
     let input = Regex::new(r"^(?:\s*\n)+")
@@ -21,9 +21,9 @@ where
 
 pub fn setup_from_file<T>() -> (T, Context)
 where
-    T: Solution + SolutionInfo,
+    T: Solution + SolutionStatic,
 {
-    let info = T::info();
+    let info = T::as_type().info;
     let file_path = format!("input/day{}.txt", info.day_str());
     let input = std::fs::read_to_string(file_path).unwrap();
     return setup::<T>(&input);

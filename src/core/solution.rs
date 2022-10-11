@@ -77,7 +77,7 @@ impl SolutionType {
     }
 }
 
-pub trait SolutionInfo
+pub trait SolutionStatic
 where
     Self: Solution + Default + 'static,
 {
@@ -87,15 +87,16 @@ where
 
     fn as_type() -> SolutionType {
         SolutionType {
-            info: Self::info(),
+            info: Self::new().info(),
             ctor: || Box::new(Self::new()),
         }
     }
-
-    fn info() -> Title;
 }
+impl<T: Solution + Default + 'static> SolutionStatic for T {}
 
 pub trait Solution {
+    // This is an instance method to satisfy object safety and to require only 1 impl block for implementers.
+    fn info(&self) -> Title;
     fn part1(&mut self, ctx: &Context) -> SolutionResult;
     fn part2(&mut self, ctx: &Context) -> SolutionResult;
 }

@@ -2,13 +2,11 @@ use crate::solution::*;
 
 #[derive(Default)]
 pub struct Day01;
-impl SolutionInfo for Day01 {
-    fn info() -> Title {
+impl Solution for Day01 {
+    fn info(&self) -> Title {
         Title::new(2021, 1, "Sonar Sweep")
     }
-}
 
-impl Solution for Day01 {
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
         let items = ctx.input_values::<i32>()?;
         let count =
