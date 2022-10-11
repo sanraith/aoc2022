@@ -1,0 +1,12 @@
+[package]
+name = "aoc_cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aoc_lib = { path = "../aoc_lib" }
+clap = { version = "4.0.11", features = ["derive"] }
+clearscreen = "1.0.10"
+regex = "1.6"
+ureq = "2.5.0"
+url = "2.3.1"

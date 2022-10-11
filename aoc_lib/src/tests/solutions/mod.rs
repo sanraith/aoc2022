@@ -24,8 +24,9 @@ where
     T: Solution + SolutionStatic,
 {
     let info = T::as_type().info;
-    let file_path = format!("input/day{}.txt", info.day_str());
-    let input = std::fs::read_to_string(file_path).unwrap();
+    let file_path = format!("../input/day{}.txt", info.day_str());
+    let input =
+        std::fs::read_to_string(&file_path).expect(&format!("reading input file '{}'", &file_path));
     return setup::<T>(&input);
 }
 

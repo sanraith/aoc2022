@@ -1,20 +1,2 @@
-[package]
-name = "aoc2022"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-name = "aoc2022"
-crate-type = ["lib", "cdylib"]
-
-[[bin]]
-name = "aoc_cli"
-path = "src/main.rs"
-
-[dependencies]
-clap = { version = "4.0.11", features = ["derive"] }
-# clearscreen = "1.0.10" # wasm incompatible TODO split to multiple crates
-regex = "1.6"
-ureq = "2.5.0"
-url = "2.3.1"
-wasm-bindgen = "0.2"
+[workspace]
+members = ["aoc_cli", "aoc_lib"]

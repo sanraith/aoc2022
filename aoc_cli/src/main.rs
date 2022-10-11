@@ -1,10 +1,10 @@
-use aoc2022::{
-    cli::*,
+use aoc::{solution::*, solutions::*};
+use aoc_cli::{
+    args::*,
     scaffold::{self, Target},
-    solution::*,
-    solutions::Day01,
 };
 use clap::Parser;
+use clearscreen;
 use std::io::{self, Write};
 
 fn run_solution() {
@@ -23,6 +23,7 @@ fn run_solution() {
 }
 
 fn main() {
+    _ = clearscreen::clear();
     println!("--- Advent of Code 2022 CLI by sanraith ---");
 
     let cli = Args::parse();
