@@ -3,6 +3,24 @@ use std::{error::Error, str::FromStr};
 
 pub type SolutionResult = Result<String, Box<dyn Error>>;
 
+pub struct Title {
+    pub year: u16,
+    pub day: u8,
+    pub title: &'static str,
+}
+impl Title {
+    pub fn new(year: u16, day: u8, title: &'static str) -> Self {
+        Title { year, day, title }
+    }
+
+    /// Day as string with 0..1 preceding zeros.
+    /// -  5 => "05"
+    /// - 12 => "12"
+    pub fn day_str(&self) -> String {
+        format!("{:0>2}", self.day.to_string())
+    }
+}
+
 pub struct Context {
     pub raw_input: String,
     pub on_progress: fn(f32) -> (),
@@ -49,29 +67,35 @@ impl Context {
     }
 }
 
-pub trait Solution
+pub struct SolutionType {
+    pub info: Title,
+    ctor: fn() -> Box<dyn Solution>,
+}
+impl SolutionType {
+    pub fn create_new(&self) -> Box<dyn Solution> {
+        (self.ctor)()
+    }
+}
+
+pub trait SolutionInfo
 where
-    Self: Default,
+    Self: Solution + Default + 'static,
 {
     fn new() -> Self {
         Self::default()
     }
 
-    fn day_str() -> Option<String> {
-        Some(
-            Regex::new(r"(?:::Day)(\d+)")
-                .unwrap()
-                .captures(std::any::type_name::<Self>())?
-                .get(1)?
-                .as_str()
-                .to_owned(),
-        )
+    fn as_type() -> SolutionType {
+        SolutionType {
+            info: Self::info(),
+            ctor: || Box::new(Self::new()),
+        }
     }
 
-    fn day_number() -> Option<u8> {
-        Self::day_str()?.parse::<u8>().ok()
-    }
+    fn info() -> Title;
+}
 
+pub trait Solution {
     fn part1(&mut self, ctx: &Context) -> SolutionResult;
     fn part2(&mut self, ctx: &Context) -> SolutionResult;
 }
