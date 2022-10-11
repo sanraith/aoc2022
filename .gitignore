@@ -3,6 +3,9 @@
 # Local cache for scaffolding
 /.cache
 
+# Local configuration file for aoc_cli
+/session.ini
+
 # will have compiled files and executables
 /target
 

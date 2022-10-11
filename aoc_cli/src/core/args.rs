@@ -11,12 +11,15 @@ pub struct Args {
 pub enum Command {
     /// Scaffold solution and test files
     Scaffold {
-        /// List of days to scaffold. Scaffold next day if left empty.
-        days: Vec<u8>,
+        /// Specifies the target year. Defaults to the latest available AOC year.
+        #[arg(short, long)]
+        year: Option<i32>,
+        /// List of days to scaffold. Defaults to [the latest available AOC day].
+        days: Vec<u32>,
     },
     /// Solve puzzles
     Solve {
-        /// List of days to solve. Solves all days if empty.
+        /// List of days to solve. Defaults to [all implemented days].
         days: Vec<u8>,
     },
 }

@@ -4,12 +4,12 @@ use std::{error::Error, str::FromStr};
 pub type SolutionResult = Result<String, Box<dyn Error>>;
 
 pub struct Title {
-    pub year: u16,
-    pub day: u8,
+    pub year: i32,
+    pub day: u32,
     pub title: &'static str,
 }
 impl Title {
-    pub fn new(year: u16, day: u8, title: &'static str) -> Self {
+    pub fn new(year: i32, day: u32, title: &'static str) -> Self {
         Title { year, day, title }
     }
 

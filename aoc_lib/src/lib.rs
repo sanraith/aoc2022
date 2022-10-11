@@ -2,6 +2,7 @@
 pub mod core {
     pub mod js_interop;
     pub mod solution;
+    pub mod util;
 }
 pub mod solutions;
 
@@ -12,3 +13,4 @@ mod tests {
 
 // Re-exports
 pub use crate::core::solution;
+pub use crate::core::util;

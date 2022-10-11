@@ -5,8 +5,10 @@ edition = "2021"
 
 [dependencies]
 aoc_lib = { path = "../aoc_lib" }
+chrono = "0.4.22"
 clap = { version = "4.0.11", features = ["derive"] }
 clearscreen = "1.0.10"
-regex = "1.6"
+regex = "1.6.0"
+rust-ini = "0.18.0"
 ureq = "2.5.0"
 url = "2.3.1"

@@ -1,11 +1,30 @@
 use aoc::{solution::*, solutions::*};
-use aoc_cli::{
-    args::*,
-    scaffold::{self, Target},
-};
+use aoc_cli::{args::*, scaffold, timing};
 use clap::Parser;
 use clearscreen;
 use std::io::{self, Write};
+
+fn main() {
+    _ = clearscreen::clear();
+    println!("--- Advent of Code 2022 CLI by sanraith ---");
+
+    let args = Args::parse();
+    match args.mode {
+        Some(Command::Scaffold { year, days }) => scaffold(year, days),
+        Some(Command::Solve { days }) => {
+            let days_str = days
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            println!("Solving days: {}", days_str);
+        }
+        None => {
+            println!("Default behavior");
+            run_solution();
+        }
+    }
+}
 
 fn run_solution() {
     let context = Context {
@@ -22,30 +41,16 @@ fn run_solution() {
     println!("{}", result.unwrap_or_else(|x| format!("Error: {}", x)));
 }
 
-fn main() {
-    _ = clearscreen::clear();
-    println!("--- Advent of Code 2022 CLI by sanraith ---");
+fn scaffold(year: Option<i32>, days: Vec<u32>) {
+    let year = match year {
+        Some(year) => year,
+        None => timing::latest_aoc_date().year,
+    };
 
-    let cli = Args::parse();
-    match cli.mode {
-        Some(Command::Scaffold { days }) => {
-            let target = match days.len() {
-                1.. => Target::Days(days),
-                _ => Target::NextDay(),
-            };
-            scaffold::scaffold(target);
-        }
-        Some(Command::Solve { days }) => {
-            let days_str = days
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-            println!("Solving days: {}", days_str);
-        }
-        None => {
-            println!("Default behavior");
-            run_solution();
-        }
-    }
+    match days.len() {
+        1.. => days
+            .into_iter()
+            .for_each(|day| scaffold::scaffold_day(year, day)),
+        _ => scaffold::scaffold_day(year, timing::latest_aoc_date().day),
+    };
 }

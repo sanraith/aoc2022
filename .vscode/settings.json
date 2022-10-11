@@ -1,7 +1,9 @@
 {
     "cSpell.words": [
         "bindgen",
+        "chrono",
         "clearscreen",
+        "Datelike",
         "sanraith",
         "ureq"
     ]
