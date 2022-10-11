@@ -13,7 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.0.11", features = ["derive"] }
-clearscreen = "1.0.10"
+# clearscreen = "1.0.10" # wasm incompatible TODO split to multiple crates
 regex = "1.6"
 ureq = "2.5.0"
 url = "2.3.1"

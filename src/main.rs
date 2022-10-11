@@ -5,7 +5,6 @@ use aoc2022::{
     solutions::Day01,
 };
 use clap::Parser;
-use clearscreen;
 use std::io::{self, Write};
 
 fn run_solution() {
@@ -24,17 +23,16 @@ fn run_solution() {
 }
 
 fn main() {
-    clearscreen::clear().ok();
     println!("--- Advent of Code 2022 CLI by sanraith ---");
 
     let cli = Args::parse();
     match cli.mode {
         Some(Command::Scaffold { days }) => {
-            let days = match days.len() {
-                0 => vec![0], // TODO next available day
-                _ => days,
+            let target = match days.len() {
+                1.. => Target::Days(days),
+                _ => Target::NextDay(),
             };
-            scaffold::scaffold(Target::Days(&days));
+            scaffold::scaffold(target);
         }
         Some(Command::Solve { days }) => {
             let days_str = days
