@@ -9,3 +9,7 @@ impl YearDay {
         YearDay { year, day }
     }
 }
+
+pub fn day_str(day: u32) -> String {
+    format!("{:0>2}", day)
+}

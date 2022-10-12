@@ -1,4 +1,7 @@
 use crate::config::{self, Config};
+use aoc::util::day_str;
+use regex::Regex;
+use std::borrow::Cow;
 use std::error::Error;
 use std::fs::{self, File};
 use std::io::Write;
@@ -8,14 +11,37 @@ use url::Url;
 const CACHE_DIR: &'static str = ".cache";
 const BASE_URL: &'static str = "https://adventofcode.com/";
 
+const SOLUTION_DIR: &'static str = "aoc_lib/src/solutions/";
+const SOLUTION_TEMPLATE_PATH: &'static str = "aoc_lib/templates/day__DAY_STR__.rs.template";
+const DAY_PLACEHOLDER: &'static str = "__DAY__";
+const YEAR_PLACEHOLDER: &'static str = "__YEAR__";
+const TITLE_PLACEHOLDER: &'static str = "__TITLE__";
+const DAY_STR_PLACEHOLDER: &'static str = "__DAY_STR__";
+
+#[derive(Default)]
+struct PuzzleInfo {
+    title: String,
+    year: i32,
+    day: u32,
+    day_str: String,
+}
+
 pub fn scaffold_day(year: i32, day: u32) {
     let session_key = get_session_key();
     println!("Scaffolding for year {} day {}... ", year, day);
+    let puzzle_info = PuzzleInfo {
+        year,
+        day,
+        day_str: day_str(day),
+        ..Default::default()
+    };
 
     let puzzle_url = format!("{year}/day/{day}");
     let input_url = format!("{year}/day/{day}/input");
     let _puzzle = request_cached(&puzzle_url, &session_key).unwrap();
     let _input = request_cached(&input_url, &session_key).unwrap();
+
+    generate_solution_file(&puzzle_info).unwrap();
 
     println!("Ok.");
 }
@@ -79,4 +105,56 @@ fn request_cached(sub_url: &str, _session_key: &str) -> Result<String, Box<dyn E
         .expect("Unable to write data to cache file");
 
     Ok(contents)
+}
+
+fn generate_solution_file(puzzle_info: &PuzzleInfo) -> Result<(), Box<dyn Error>> {
+    let target_file_path = match Path::new(&replace_placeholder(
+        SOLUTION_TEMPLATE_PATH.to_owned(),
+        DAY_STR_PLACEHOLDER,
+        &puzzle_info.day_str,
+    ))
+    .with_extension("")
+    .file_name()
+    {
+        Some(x) => x.to_str().unwrap().to_owned(),
+        None => return Err("Target path invalid".into()),
+    };
+    let target_file_path = Path::new(SOLUTION_DIR).join(&target_file_path);
+    println!("Scaffolding source: {}", target_file_path.to_str().unwrap());
+
+    let contents = fs::read_to_string(SOLUTION_TEMPLATE_PATH)?;
+    let contents = replace_placeholder(contents, YEAR_PLACEHOLDER, &puzzle_info.year.to_string());
+    let contents = replace_placeholder(contents, DAY_PLACEHOLDER, &puzzle_info.day.to_string());
+    let contents = replace_placeholder(contents, DAY_STR_PLACEHOLDER, &puzzle_info.day_str);
+    let contents = replace_placeholder(contents, TITLE_PLACEHOLDER, &puzzle_info.title);
+
+    fs::create_dir_all(SOLUTION_DIR)?;
+    let mut f = File::create(&target_file_path)?;
+    f.write_all(contents.as_bytes())?;
+
+    Ok(())
+}
+
+fn replace_placeholder(source: String, placeholder: &str, target: &str) -> String {
+    let regex = match Regex::new(&format!("([ \t]*){}", placeholder)) {
+        Ok(regex) => regex,
+        Err(_) => return source,
+    };
+
+    let mut source = source;
+    while let Some(captures) = regex.captures(&source) {
+        let indent = &captures[1];
+        let indented_content = target
+            .lines()
+            .map(|l| indent.to_string() + l)
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        match regex.replace(&source, &indented_content) {
+            Cow::Borrowed(_) => break,
+            Cow::Owned(new) => source = new,
+        };
+    }
+
+    return source;
 }

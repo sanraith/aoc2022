@@ -16,13 +16,13 @@ fn example_input() {
 260
 263"#,
     );
-    assert_eq!(day.part1(&ctx).unwrap(), "7");
-    assert_eq!(day.part2(&ctx).unwrap(), "5");
+    assert_eq!(day.part1(&ctx).unwrap(), "7", "solve part 1");
+    assert_eq!(day.part2(&ctx).unwrap(), "5", "solve part 2");
 }
 
 #[test]
 fn puzzle_input() {
     let (mut day, ctx) = setup_from_file::<Day01>();
-    assert_eq!(day.part1(&ctx).unwrap(), "1292");
-    assert_eq!(day.part2(&ctx).unwrap(), "1262");
+    assert_eq!(day.part1(&ctx).unwrap(), "1292", "solve part 1");
+    assert_eq!(day.part2(&ctx).unwrap(), "1262", "solve part 2");
 }

@@ -1,0 +1,17 @@
+use crate::solution::*;
+
+#[derive(Default)]
+pub struct Day__DAY_STR__;
+impl Solution for Day__DAY_STR__ {
+    fn info(&self) -> Title {
+        Title::new(__YEAR__, __DAY__, "__TITLE__")
+    }
+
+    fn part1(&mut self, _ctx: &Context) -> SolutionResult {
+        Err("not implemented".into())
+    }
+
+    fn part2(&mut self, _ctx: &Context) -> SolutionResult {
+        Err("not implemented".into())
+    }
+}
