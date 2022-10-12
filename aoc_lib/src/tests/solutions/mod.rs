@@ -1,6 +1,28 @@
 use crate::core::solution::*;
 use regex::Regex;
 
+pub fn assert_result(result: SolutionResult, expected: &str, message: &str) {
+    match result {
+        Ok(actual) if &actual == expected => (),
+        Ok(actual) => {
+            eprintln!(
+                "Failed on {}\nExpected: \"{}\"\nActual:   \"{}\"\n",
+                message, expected, &actual
+            );
+            panic!();
+        }
+        // Do not fail test if the tested method is not implemented yet
+        Err(err) if err.is::<NotImplementedError>() => (),
+        Err(err) => {
+            eprintln!(
+                "Failed on {}\nExpected: \"{}\"\nError:    {:?}\n          {}\n",
+                message, expected, err, err
+            );
+            panic!();
+        }
+    };
+}
+
 pub fn setup<T>(input: &str) -> (T, Context)
 where
     T: Solution + SolutionStatic,

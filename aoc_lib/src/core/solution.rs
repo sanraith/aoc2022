@@ -1,7 +1,17 @@
 use regex::Regex;
-use std::{error::Error, str::FromStr};
+use std::{error::Error, fmt, str::FromStr};
 
 pub type SolutionResult = Result<String, Box<dyn Error>>;
+
+/// Indicates that the solution method is not implemented yet.
+#[derive(Debug, Clone)]
+pub struct NotImplementedError;
+impl Error for NotImplementedError {}
+impl fmt::Display for NotImplementedError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "method is not implemented")
+    }
+}
 
 pub struct Title {
     pub year: i32,
