@@ -10,6 +10,7 @@ pub mod solutions;
 #[cfg(test)]
 mod tests {
     mod solutions;
+    mod util;
 }
 
 // Re-exports

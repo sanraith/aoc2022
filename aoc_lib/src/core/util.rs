@@ -1,4 +1,3 @@
-// --- Collect all solutions ---
 #[derive(Eq, PartialEq, Hash, Default)]
 pub struct YearDay {
     pub year: i32,
@@ -13,3 +12,5 @@ impl YearDay {
 pub fn day_str(day: u32) -> String {
     format!("{:0>2}", day)
 }
+
+pub type GenericErrorResult<T> = Result<T, Box<dyn std::error::Error>>;

@@ -1,5 +1,6 @@
-use super::*;
+use crate::solution::*;
 use crate::solutions::Day01;
+use crate::tests::util::*;
 
 #[test]
 fn example_input() {

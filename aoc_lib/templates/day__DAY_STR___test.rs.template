@@ -1,0 +1,17 @@
+use crate::solution::*;
+use crate::solutions::Day__DAY_STR__;
+use crate::tests::util::*;
+
+#[test]
+fn example_input() {
+    let (mut day, ctx) = setup::<Day__DAY_STR__>(r#"__EXAMPLE_INPUT__"#);
+    assert_result(day.part1(&ctx), "__EXAMPLE_PART_1_RESULT__", "solve part 1");
+    assert_result(day.part2(&ctx), "day__DAY_STR___part2", "solve part 2");
+}
+
+#[test]
+fn puzzle_input() {
+    let (mut day, ctx) = setup_from_file::<Day__DAY_STR__>();
+    assert_result(day.part1(&ctx), "day__DAY_STR___part1", "solve part 1");
+    assert_result(day.part2(&ctx), "day__DAY_STR___part2", "solve part 2");
+}
