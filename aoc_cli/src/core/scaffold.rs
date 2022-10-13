@@ -1,6 +1,7 @@
 use crate::config::{self, Config};
 use aoc::util::{day_str, GenericErrorResult};
 use regex::Regex;
+use scraper::{ElementRef, Html, Selector};
 use std::borrow::Cow;
 use std::error::Error;
 use std::fs::{self, File};
@@ -39,6 +40,15 @@ struct PuzzleInfo {
     example_part1_result: String,
 }
 
+trait JoinText {
+    fn join(self, sep: &str) -> String;
+}
+impl JoinText for scraper::element_ref::Text<'_> {
+    fn join(self, sep: &str) -> String {
+        self.collect::<Vec<_>>().join(sep)
+    }
+}
+
 pub fn scaffold_day(year: i32, day: u32) {
     let session_key = get_session_key();
     println!("Scaffolding for year {} day {}... ", year, day);
@@ -48,17 +58,69 @@ pub fn scaffold_day(year: i32, day: u32) {
         day_str: day_str(day),
         ..Default::default()
     };
-
-    let puzzle_url = format!("{year}/day/{day}");
-    let input_url = format!("{year}/day/{day}/input");
-    let _puzzle = request_cached(&puzzle_url, &session_key).unwrap();
-    puzzle_info.puzzle_input = request_cached(&input_url, &session_key).unwrap();
+    parse_puzzle_info(&mut puzzle_info, &session_key);
 
     generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, SOLUTION_DIR).unwrap();
     generate_file(&puzzle_info, TEST_TEMPLATE_PATH, TEST_DIR).unwrap();
     generate_file(&puzzle_info, INPUT_TEMPLATE_PATH, INPUT_DIR).unwrap();
 
     println!("Ok.");
+}
+
+fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
+    let input_url = format!("{}/day/{}/input", puzzle_info.year, puzzle_info.day);
+    puzzle_info.puzzle_input = request_cached(&input_url, session_key).unwrap();
+
+    let description_url = format!("{}/day/{}", puzzle_info.year, puzzle_info.day);
+    let html = request_cached(&description_url, session_key).unwrap();
+    let html = Html::parse_document(&html);
+
+    let title_re = Regex::new(r".*: (.*) ---").unwrap();
+    puzzle_info.title = html
+        .select(&Selector::parse("h2").unwrap())
+        .next()
+        .map_or(None, |elem| {
+            title_re
+                .captures(&elem.text().join(" "))
+                .map_or(None, |c| Some(c.get(1).unwrap().as_str().to_owned()))
+        })
+        .unwrap_or(String::default());
+
+    // Take the first block that has an 'example' sentence before it, or the first one without if none found
+    let example_input_candidates = html
+        .select(&Selector::parse("article:first-of-type pre code").unwrap())
+        .filter_map(|elem| {
+            elem.parent()
+                .unwrap()
+                .prev_siblings()
+                .filter(|x| x.has_children())
+                .next()
+                .and_then(ElementRef::wrap)
+                .and_then(|x| Some(x.text().join(" ")))
+                .and_then(|x| Some((x.to_lowercase().contains("example"), elem.text().join(" "))))
+        })
+        .collect::<Vec<_>>();
+    puzzle_info.example_input = example_input_candidates
+        .iter()
+        .filter(|x| x.0)
+        .next()
+        .map_or(
+            example_input_candidates
+                .get(0)
+                .map_or(String::default(), |x| x.1.to_owned()),
+            |x| x.1.to_owned(),
+        );
+
+    // Take the last block that does not end with a question
+    let ends_with_question_re = Regex::new(r"^.*\?\s*$").unwrap();
+    puzzle_info.example_part1_result = html
+        .select(&Selector::parse("article:first-of-type em").unwrap())
+        .map(|e| e.text().join(" "))
+        .collect::<Vec<_>>()
+        .iter()
+        .filter(|e| ends_with_question_re.captures(e).is_none())
+        .last()
+        .map_or(String::default(), |x| x.trim().to_owned());
 }
 
 fn get_session_key() -> String {
