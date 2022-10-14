@@ -2,3 +2,4 @@
 
 // Module definitions
 mod day01_test;
+mod day12_test;

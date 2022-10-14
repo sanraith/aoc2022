@@ -101,6 +101,7 @@ fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
                 .and_then(|x| Some((x.to_lowercase().contains("example"), elem.text().join(" "))))
         })
         .collect::<Vec<_>>();
+
     puzzle_info.example_input = example_input_candidates
         .iter()
         .filter(|x| x.0)

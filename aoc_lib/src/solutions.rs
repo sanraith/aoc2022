@@ -2,14 +2,17 @@
 
 // Module definitions
 mod day01;
+mod day12;
 
 // Re-exports
 pub use day01::Day01;
+pub use day12::Day12;
 
 // List of solutions
 use crate::solution::{SolutionStatic, SolutionType};
 pub fn solution_list() -> Vec<SolutionType> {
     vec![
         Day01::as_type(),
+        Day12::as_type(),
     ]
 }
