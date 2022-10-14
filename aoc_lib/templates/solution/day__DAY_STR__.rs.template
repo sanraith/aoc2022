@@ -3,7 +3,7 @@ use crate::solution::*;
 #[derive(Default)]
 pub struct Day__DAY_STR__;
 impl Solution for Day__DAY_STR__ {
-    fn info(&self) -> Title {
+    fn info(&self) -> SolutionInfo {
         Title::new(__YEAR__, __DAY__, "__TITLE__")
     }
 

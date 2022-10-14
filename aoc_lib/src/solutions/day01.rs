@@ -3,7 +3,7 @@ use crate::solution::*;
 #[derive(Default)]
 pub struct Day01;
 impl Solution for Day01 {
-    fn info(&self) -> Title {
+    fn info(&self) -> SolutionInfo {
         Title::new(2021, 1, "Sonar Sweep")
     }
 

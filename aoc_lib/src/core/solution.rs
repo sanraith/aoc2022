@@ -1,7 +1,8 @@
+use crate::util::{day_str, GenericErrorResult};
 use regex::Regex;
 use std::{error::Error, fmt, str::FromStr};
 
-pub type SolutionResult = Result<String, Box<dyn Error>>;
+pub type SolutionResult = GenericErrorResult<String>;
 
 /// Indicates that the solution method is not implemented yet.
 #[derive(Debug, Clone)]
@@ -13,21 +14,22 @@ impl fmt::Display for NotImplementedError {
     }
 }
 
-pub struct Title {
+pub type Title = SolutionInfo;
+pub struct SolutionInfo {
     pub year: i32,
     pub day: u32,
     pub title: &'static str,
 }
-impl Title {
+impl SolutionInfo {
     pub fn new(year: i32, day: u32, title: &'static str) -> Self {
-        Title { year, day, title }
+        SolutionInfo { year, day, title }
     }
 
     /// Day as string with 0..1 preceding zeros.
     /// -  5 => "05"
     /// - 12 => "12"
     pub fn day_str(&self) -> String {
-        format!("{:0>2}", self.day.to_string())
+        day_str(self.day)
     }
 }
 
@@ -78,7 +80,7 @@ impl Context {
 }
 
 pub struct SolutionType {
-    pub info: Title,
+    pub info: SolutionInfo,
     ctor: fn() -> Box<dyn Solution>,
 }
 impl SolutionType {
@@ -106,7 +108,7 @@ impl<T: Solution + Default + 'static> SolutionStatic for T {}
 
 pub trait Solution {
     // This is an instance method to satisfy object safety and to require only 1 impl block for implementers.
-    fn info(&self) -> Title;
+    fn info(&self) -> SolutionInfo;
     fn part1(&mut self, ctx: &Context) -> SolutionResult;
     fn part2(&mut self, ctx: &Context) -> SolutionResult;
 }

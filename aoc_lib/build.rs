@@ -7,11 +7,11 @@ const MODULE_DEFINITIONS_PLACEHOLDER: &'static str = "__MODULE_DEFINITIONS__";
 
 const SOLUTION_DIRECTORY: &'static str = "src/solutions/";
 const SOLUTION_MODULE_PATH: &'static str = "src/solutions.rs";
-const SOLUTION_MODULE_TEMPLATE_PATH: &'static str = "templates/solutions.rs.template";
+const SOLUTION_MODULE_TEMPLATE_PATH: &'static str = "templates/solution/solutions.rs.template";
 
 const TEST_DIRECTORY: &'static str = "src/tests/solutions/";
 const TEST_MODULE_PATH: &'static str = "src/tests/solutions.rs";
-const TEST_MODULE_TEMPLATE_PATH: &'static str = "templates/solutions_test.rs.template";
+const TEST_MODULE_TEMPLATE_PATH: &'static str = "templates/test/solutions.rs.template";
 
 fn main() {
     println!("cargo:rerun-if-changed={}", SOLUTION_DIRECTORY);

@@ -13,13 +13,14 @@ const CACHE_DIR: &'static str = ".cache";
 const BASE_URL: &'static str = "https://adventofcode.com/";
 
 const SOLUTION_DIR: &'static str = "aoc_lib/src/solutions/";
-const SOLUTION_TEMPLATE_PATH: &'static str = "aoc_lib/templates/day__DAY_STR__.rs.template";
+const SOLUTION_TEMPLATE_PATH: &'static str =
+    "aoc_lib/templates/solution/day__DAY_STR__.rs.template";
 
 const TEST_DIR: &'static str = "aoc_lib/src/tests/solutions/";
-const TEST_TEMPLATE_PATH: &'static str = "aoc_lib/templates/day__DAY_STR___test.rs.template";
+const TEST_TEMPLATE_PATH: &'static str = "aoc_lib/templates/test/day__DAY_STR___test.rs.template";
 
 const INPUT_DIR: &'static str = "input/";
-const INPUT_TEMPLATE_PATH: &'static str = "aoc_lib/templates/day__DAY_STR__.txt.template";
+const INPUT_TEMPLATE_PATH: &'static str = "aoc_lib/templates/input/day__DAY_STR__.txt.template";
 
 const DAY_PLACEHOLDER: &'static str = "__DAY__";
 const YEAR_PLACEHOLDER: &'static str = "__YEAR__";
@@ -116,8 +117,6 @@ fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
     puzzle_info.example_part1_result = html
         .select(&Selector::parse("article:first-of-type em").unwrap())
         .map(|e| e.text().join(" "))
-        .collect::<Vec<_>>()
-        .iter()
         .filter(|e| ends_with_question_re.captures(e).is_none())
         .last()
         .map_or(String::default(), |x| x.trim().to_owned());
@@ -152,7 +151,7 @@ fn get_session_key() -> String {
     config.session_key
 }
 
-fn request_cached(sub_url: &str, _session_key: &str) -> Result<String, Box<dyn Error>> {
+fn request_cached(sub_url: &str, session_key: &str) -> Result<String, Box<dyn Error>> {
     let cached_file_name = format!("{}.txt", sub_url.replace("/", "_"));
     let cached_file_path = Path::new(CACHE_DIR).join(cached_file_name);
     let url = Url::parse(BASE_URL)?.join(sub_url)?;
@@ -167,7 +166,7 @@ fn request_cached(sub_url: &str, _session_key: &str) -> Result<String, Box<dyn E
 
     println!("Requesting: {}", &url);
     let contents = ureq::get(&url.to_string())
-        .set("cookie", &format!("session={_session_key};"))
+        .set("cookie", &format!("session={session_key};"))
         .call()?
         .into_string()?;
 

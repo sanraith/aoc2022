@@ -1,6 +1,6 @@
 
 # --- RUST ---
-# Local cache for scaffolding
+# Local cache for aoc_cli
 /.cache
 
 # Local configuration file for aoc_cli
