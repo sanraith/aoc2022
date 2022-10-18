@@ -1,5 +1,5 @@
 use crate::solution::*;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct Day12 {
@@ -12,30 +12,27 @@ impl Solution for Day12 {
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
         self.cave_system = Some(self.parse_input(ctx));
-        let path_count = self.traverse(false);
+        let path_count = self.traverse(0);
         Ok(path_count.to_string())
     }
 
     fn part2(&mut self, _ctx: &Context) -> SolutionResult {
-        let path_count = self.traverse(true);
+        let path_count = self.traverse(1);
         Ok(path_count.to_string())
     }
 }
 impl Day12 {
-    fn traverse(&mut self, allow_duplicate: bool) -> i32 {
+    fn traverse(&mut self, allowed_duplicates: i32) -> i32 {
         let start = self.cave_system.as_ref().unwrap().start_id;
-        self._traverse(
-            start,
-            &mut BTreeSet::from([start]),
-            if allow_duplicate { 1 } else { 0 },
-        )
+        self._traverse(start, &mut Vec::new(), allowed_duplicates)
     }
 
-    fn _traverse(&self, current: usize, visited: &mut BTreeSet<usize>, remaining: i32) -> i32 {
-        let mut path_count = 0;
+    fn _traverse(&self, current: usize, visited: &mut Vec<usize>, remaining: i32) -> i32 {
         let sys = self.cave_system.as_ref().unwrap();
-        let candidates = &sys.caves[current].paths;
-        for &next_index in candidates {
+        let mut path_count = 0;
+        visited.push(current);
+
+        for &next_index in &sys.caves[current].paths {
             let next = &sys.caves[next_index];
             let is_duplicate = next.is_small && visited.contains(&next_index);
             let next_remaining_duplicates = remaining - if is_duplicate { 1 } else { 0 };
@@ -46,16 +43,13 @@ impl Day12 {
                     continue;
                 }
                 _ if !next.is_small || (!is_duplicate || remaining > 0) => {
-                    let could_insert = visited.insert(next_index);
                     path_count += self._traverse(next_index, visited, next_remaining_duplicates);
-                    if could_insert {
-                        visited.remove(&next_index);
-                    }
                 }
                 _ => continue,
             }
         }
 
+        visited.pop();
         path_count
     }
 
@@ -63,8 +57,8 @@ impl Day12 {
         let mut next_id = 0;
         let mut caves: HashMap<String, Cave> = HashMap::new();
         for line in ctx.input().lines() {
-            let parts = line.split("-").collect::<Vec<_>>();
-            parts
+            let names = line.split("-").collect::<Vec<_>>();
+            names
                 .iter()
                 .filter_map(|&key| match caves.contains_key(key) {
                     true => None,
@@ -85,10 +79,10 @@ impl Day12 {
                     caves.insert(c.name.clone(), c);
                 });
 
-            let id0 = caves[parts[0]].id;
-            let id1 = caves[parts[1]].id;
-            caves.get_mut(parts[0]).unwrap().paths.push(id1);
-            caves.get_mut(parts[1]).unwrap().paths.push(id0);
+            let id0 = caves[names[0]].id;
+            let id1 = caves[names[1]].id;
+            caves.get_mut(names[0]).unwrap().paths.push(id1);
+            caves.get_mut(names[1]).unwrap().paths.push(id0);
         }
 
         CaveSystem {
