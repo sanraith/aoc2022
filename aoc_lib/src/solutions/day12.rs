@@ -1,9 +1,9 @@
 use crate::solution::*;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]
 pub struct Day12 {
-    caves: Caves,
+    cave_system: Option<CaveSystem>,
 }
 impl Solution for Day12 {
     fn info(&self) -> SolutionInfo {
@@ -11,96 +11,109 @@ impl Solution for Day12 {
     }
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
-        self.caves = self.parse_input(&ctx.input());
-        let start = Rc::clone(&self.caves["start"]);
-        let path_count = self.traverse(&mut vec![start], true);
-
-        return Ok(path_count.to_string());
+        self.cave_system = Some(self.parse_input(ctx));
+        let path_count = self.traverse(false);
+        Ok(path_count.to_string())
     }
 
     fn part2(&mut self, _ctx: &Context) -> SolutionResult {
-        let start = Rc::clone(&self.caves["start"]);
-        let path_count = self.traverse(&mut vec![start], false);
-
-        return Ok(path_count.to_string());
+        let path_count = self.traverse(true);
+        Ok(path_count.to_string())
     }
 }
 impl Day12 {
-    fn parse_input(&self, input: &str) -> Caves {
-        let mut caves: Caves = HashMap::new();
-        for line in input.lines() {
-            line.split("-").for_each(|key| {
-                caves.insert(
-                    key.to_string(),
-                    Rc::new(Cave::new(key.to_string(), RefCell::new(Vec::new()))),
-                );
-            });
-        }
-
-        for line in input.lines() {
-            let parts = line.split("-").collect::<Vec<_>>();
-            let a = &caves[parts[0]];
-            let b = &caves[parts[1]];
-            a.paths.borrow_mut().push(Rc::clone(b));
-            b.paths.borrow_mut().push(Rc::clone(a));
-        }
-
-        let caves = caves;
-
-        caves
+    fn traverse(&mut self, allow_duplicate: bool) -> i32 {
+        let start = self.cave_system.as_ref().unwrap().start_id;
+        self._traverse(
+            start,
+            &mut BTreeSet::from([start]),
+            if allow_duplicate { 1 } else { 0 },
+        )
     }
 
-    fn traverse(&self, path: &mut Vec<Rc<Cave>>, has_duplicate: bool) -> i32 {
+    fn _traverse(&self, current: usize, visited: &mut BTreeSet<usize>, remaining: i32) -> i32 {
         let mut path_count = 0;
-        let path_last = Rc::clone(path.last().expect("non-empty path"));
-        let candidates = path_last.paths.borrow();
-        for next in candidates.iter() {
-            match Rc::clone(next) {
-                c if c.is_end => {
+        let sys = self.cave_system.as_ref().unwrap();
+        let candidates = &sys.caves[current].paths;
+        for &next_index in candidates {
+            let next = &sys.caves[next_index];
+            let is_duplicate = next.is_small && visited.contains(&next_index);
+            let next_remaining_duplicates = remaining - if is_duplicate { 1 } else { 0 };
+            match next_index {
+                _ if next_index == sys.start_id => continue,
+                _ if next_index == sys.end_id => {
                     path_count += 1;
                     continue;
                 }
-                c if c.is_start => {
-                    continue;
-                }
-                c if c.is_small && path.contains(&c) => {
-                    if has_duplicate {
-                        continue;
+                _ if !next.is_small || (!is_duplicate || remaining > 0) => {
+                    let could_insert = visited.insert(next_index);
+                    path_count += self._traverse(next_index, visited, next_remaining_duplicates);
+                    if could_insert {
+                        visited.remove(&next_index);
                     }
-                    path.push(c);
-                    path_count += self.traverse(path, true);
-                    path.pop();
                 }
-                c => {
-                    path.push(c);
-                    path_count += self.traverse(path, has_duplicate);
-                    path.pop();
-                }
+                _ => continue,
             }
         }
 
         path_count
     }
-}
 
-#[derive(Default, PartialEq, Eq)]
-struct Cave {
-    name: String,
-    paths: RefCell<Vec<Rc<Cave>>>,
-    is_small: bool,
-    is_start: bool,
-    is_end: bool,
-}
-impl Cave {
-    fn new(name: String, paths: RefCell<Vec<Rc<Cave>>>) -> Self {
-        Self {
-            is_small: &name[0..1].to_lowercase() == &name[0..1],
-            is_start: &name == "start",
-            is_end: &name == "end",
-            name,
-            paths,
+    fn parse_input(&self, ctx: &Context) -> CaveSystem {
+        let mut next_id = 0;
+        let mut caves: HashMap<String, Cave> = HashMap::new();
+        for line in ctx.input().lines() {
+            let parts = line.split("-").collect::<Vec<_>>();
+            parts
+                .iter()
+                .filter_map(|&key| match caves.contains_key(key) {
+                    true => None,
+                    false => {
+                        let result = Some(Cave {
+                            id: next_id,
+                            name: key.to_string(),
+                            paths: Vec::new(),
+                            is_small: key == key.to_lowercase(),
+                        });
+                        next_id += 1;
+                        result
+                    }
+                })
+                .collect::<Vec<_>>()
+                .into_iter()
+                .for_each(|c| {
+                    caves.insert(c.name.clone(), c);
+                });
+
+            let id0 = caves[parts[0]].id;
+            let id1 = caves[parts[1]].id;
+            caves.get_mut(parts[0]).unwrap().paths.push(id1);
+            caves.get_mut(parts[1]).unwrap().paths.push(id0);
+        }
+
+        CaveSystem {
+            start_id: caves["start"].id,
+            end_id: caves["end"].id,
+            caves: {
+                let mut caves = caves.into_iter().map(|x| x.1).collect::<Vec<_>>();
+                caves.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
+                caves
+            },
         }
     }
 }
 
-type Caves = HashMap<String, Rc<Cave>>;
+#[derive(Debug)]
+struct CaveSystem {
+    caves: Vec<Cave>,
+    start_id: usize,
+    end_id: usize,
+}
+
+#[derive(Debug)]
+struct Cave {
+    id: usize,
+    name: String,
+    paths: Vec<usize>,
+    is_small: bool,
+}

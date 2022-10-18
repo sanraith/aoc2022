@@ -7,16 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'aoc2022'",
+            "name": "Debug unit tests in library 'aoc_cli'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=aoc2022"
+                    "--package=aoc_cli"
                 ],
                 "filter": {
-                    "name": "aoc2022",
+                    "name": "aoc_cli",
                     "kind": "lib"
                 }
             },
@@ -26,15 +26,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'aoc2022_runner'",
+            "name": "Debug executable 'aoc_cli'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=aoc2022_runner",
-                    "--package=aoc2022"
+                    "--bin=aoc_cli",
+                    "--package=aoc_cli"
                 ],
                 "filter": {
-                    "name": "aoc2022_runner",
+                    "name": "aoc_cli",
                     "kind": "bin"
                 }
             },
@@ -44,17 +44,36 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'aoc2022_runner'",
+            "name": "Debug unit tests in executable 'aoc_cli'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=aoc2022_runner",
-                    "--package=aoc2022"
+                    "--bin=aoc_cli",
+                    "--package=aoc_cli"
                 ],
                 "filter": {
-                    "name": "aoc2022_runner",
+                    "name": "aoc_cli",
                     "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'aoc'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=aoc_lib"
+                ],
+                "filter": {
+                    "name": "aoc",
+                    "kind": "lib"
                 }
             },
             "args": [],

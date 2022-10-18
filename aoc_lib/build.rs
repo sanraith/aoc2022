@@ -28,7 +28,7 @@ fn generate_modules() -> GenericErrorResult<()> {
 
 fn generate_source_module() -> GenericErrorResult<()> {
     let solution_module_re = Regex::new(r"^(day\S+).rs$")?;
-    let struct_name_re = Regex::new(r"pub struct (Day[a-zA-Z0-9_]+)")?;
+    let struct_name_re = Regex::new(r"^[^/]*pub struct (Day[a-zA-Z0-9_]+)")?;
 
     let mut module_lines: Vec<String> = Vec::new();
     let mut export_lines: Vec<String> = Vec::new();
