@@ -1,8 +1,8 @@
-use crate::util::{day_str, GenericErrorResult};
+use crate::util::{day_str, GenericResult};
 use regex::Regex;
 use std::{error::Error, fmt, str::FromStr};
 
-pub type SolutionResult = GenericErrorResult<String>;
+pub type SolutionResult = GenericResult<String>;
 
 /// Indicates that the solution method is not implemented yet.
 #[derive(Debug, Clone)]
@@ -111,4 +111,9 @@ pub trait Solution {
     fn info(&self) -> SolutionInfo;
     fn part1(&mut self, ctx: &Context) -> SolutionResult;
     fn part2(&mut self, ctx: &Context) -> SolutionResult;
+
+    #[allow(unused_variables)]
+    fn init(&mut self, ctx: &Context) -> GenericResult {
+        Ok(())
+    }
 }

@@ -27,7 +27,7 @@ fn main() {
 }
 
 fn run_solution() {
-    let context = Context {
+    let ctx = Context {
         raw_input: "123\n456\n789".to_owned(),
         on_progress: |p| {
             print!("\r{:.2}%  ", p * 100.0);
@@ -35,9 +35,9 @@ fn run_solution() {
         },
     };
     let mut solution = Day01::new();
-    let result = solution.part1(&context);
-    println!();
+    let result = solution.init(&ctx).and_then(|_| solution.part1(&ctx));
 
+    println!();
     println!("{}", result.unwrap_or_else(|x| format!("Error: {}", x)));
 }
 

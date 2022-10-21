@@ -19,6 +19,6 @@ pub fn greet(name: &str) {
         ..Default::default()
     };
     let mut day = Day01::new();
-    let result = day.part1(&ctx).unwrap();
+    let result = day.init(&ctx).and_then(|_| day.part1(&ctx)).unwrap();
     log(&format!("Solution {}!", result));
 }

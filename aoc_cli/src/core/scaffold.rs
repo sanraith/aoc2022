@@ -1,9 +1,8 @@
 use crate::config::{self, Config};
-use aoc::util::{day_str, GenericErrorResult};
+use aoc::util::{day_str, GenericResult};
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
 use std::borrow::Cow;
-use std::error::Error;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -152,7 +151,7 @@ fn get_session_key() -> String {
     config.session_key
 }
 
-fn request_cached(sub_url: &str, session_key: &str) -> Result<String, Box<dyn Error>> {
+fn request_cached(sub_url: &str, session_key: &str) -> GenericResult<String> {
     let cached_file_name = format!("{}.txt", sub_url.replace("/", "_"));
     let cached_file_path = Path::new(CACHE_DIR).join(cached_file_name);
     let url = Url::parse(BASE_URL)?.join(sub_url)?;
@@ -188,7 +187,7 @@ fn generate_file(
     puzzle_info: &PuzzleInfo,
     template_path: &str,
     out_dir: &str,
-) -> GenericErrorResult<()> {
+) -> GenericResult<()> {
     let mut contents = fs::read_to_string(template_path)?;
     replace_placeholders(&mut contents, &puzzle_info);
 
@@ -201,7 +200,7 @@ fn create_file(
     puzzle_info: &PuzzleInfo,
     template_path: &str,
     target_dir: &str,
-) -> GenericErrorResult<(File, PathBuf)> {
+) -> GenericResult<(File, PathBuf)> {
     let target_file_name = match Path::new(replace_placeholder(
         &mut template_path.to_owned(),
         DAY_STR_PLACEHOLDER,

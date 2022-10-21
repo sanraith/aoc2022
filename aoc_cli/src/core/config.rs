@@ -1,5 +1,5 @@
+use aoc::util::GenericResult;
 use ini::Ini;
-use std::error::Error;
 
 pub const DEFAULT_CONFIG_PATH: &'static str = "session.ini";
 
@@ -7,7 +7,7 @@ pub struct Config {
     pub session_key: String,
 }
 impl Config {
-    pub fn load_from_file(config_file_path: &str) -> Result<Config, Box<dyn Error>> {
+    pub fn load_from_file(config_file_path: &str) -> GenericResult<Config> {
         let conf = Ini::load_from_file(config_file_path)?;
         let section = conf
             .section(None::<String>)
@@ -21,7 +21,7 @@ impl Config {
         })
     }
 
-    pub fn save_to_file(&self, config_file_path: &str) -> Result<(), Box<dyn Error>> {
+    pub fn save_to_file(&self, config_file_path: &str) -> GenericResult {
         let mut conf = Ini::new();
         conf.with_section(None::<String>)
             .set("session_key", &self.session_key);

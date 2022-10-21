@@ -13,4 +13,5 @@ pub fn day_str(day: u32) -> String {
     format!("{:0>2}", day)
 }
 
-pub type GenericErrorResult<T> = Result<T, Box<dyn std::error::Error>>;
+pub type DynError = Box<dyn std::error::Error>;
+pub type GenericResult<T = ()> = Result<T, DynError>;

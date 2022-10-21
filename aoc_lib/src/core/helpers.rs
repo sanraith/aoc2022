@@ -26,3 +26,17 @@ impl<T> VecIntoSorted<T> for Vec<T> {
         self
     }
 }
+
+pub trait AsSome<'a, T> {
+    fn as_some(&'a self) -> &'a T;
+    fn as_some_mut(&'a mut self) -> &'a mut T;
+}
+impl<'a, T> AsSome<'a, T> for Option<T> {
+    fn as_some(&'a self) -> &'a T {
+        self.as_ref().expect("option should have some value")
+    }
+
+    fn as_some_mut(&'a mut self) -> &'a mut T {
+        self.as_mut().expect("option should have some value")
+    }
+}

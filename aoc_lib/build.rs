@@ -1,9 +1,11 @@
 use regex::Regex;
 use std::{borrow::Cow, error::Error, fs, io::Write};
 
-type GenericErrorResult<T> = Result<T, Box<dyn Error>>;
+type GenericResult<T> = Result<T, Box<dyn Error>>;
 
 const MODULE_DEFINITIONS_PLACEHOLDER: &'static str = "__MODULE_DEFINITIONS__";
+const SOLUTION_TYPE_LIST_PLACEHOLDER: &'static str = "__SOLUTION_TYPE_LIST__";
+const RE_EXPORTS_PLACEHOLDER: &'static str = "__RE_EXPORTS__";
 
 const SOLUTION_DIRECTORY: &'static str = "src/solutions/";
 const SOLUTION_MODULE_PATH: &'static str = "src/solutions.rs";
@@ -21,12 +23,12 @@ fn main() {
     }
 }
 
-fn generate_modules() -> GenericErrorResult<()> {
+fn generate_modules() -> GenericResult<()> {
     generate_source_module()?;
     generate_test_module()
 }
 
-fn generate_source_module() -> GenericErrorResult<()> {
+fn generate_source_module() -> GenericResult<()> {
     let solution_module_re = Regex::new(r"^(day\S+).rs$")?;
     let struct_name_re = Regex::new(r"^[^/]*pub struct (Day[a-zA-Z0-9_]+)")?;
 
@@ -51,8 +53,16 @@ fn generate_source_module() -> GenericErrorResult<()> {
         MODULE_DEFINITIONS_PLACEHOLDER,
         &module_lines.join("\n"),
     );
-    replace_placeholder(&mut output, "__RE_EXPORTS__", &export_lines.join("\n"));
-    replace_placeholder(&mut output, "__SOLUTION_TYPE_LIST__", &vec_lines.join("\n"));
+    replace_placeholder(
+        &mut output,
+        RE_EXPORTS_PLACEHOLDER,
+        &export_lines.join("\n"),
+    );
+    replace_placeholder(
+        &mut output,
+        SOLUTION_TYPE_LIST_PLACEHOLDER,
+        &vec_lines.join("\n"),
+    );
 
     let mut file = std::fs::File::create(SOLUTION_MODULE_PATH)?;
     file.write_all(output.as_bytes())?;
@@ -60,7 +70,7 @@ fn generate_source_module() -> GenericErrorResult<()> {
     Ok(())
 }
 
-fn generate_test_module() -> GenericErrorResult<()> {
+fn generate_test_module() -> GenericResult<()> {
     let solution_module_re = Regex::new(r"^(day\S+_test).rs$")?;
     let module_lines = collect_modules_from_dir(TEST_DIRECTORY, &solution_module_re)?
         .iter()
@@ -83,7 +93,7 @@ fn generate_test_module() -> GenericErrorResult<()> {
 fn collect_modules_from_dir(
     directory: &str,
     solution_module_re: &Regex,
-) -> GenericErrorResult<Vec<(String, String)>> {
+) -> GenericResult<Vec<(String, String)>> {
     let mut modules = Vec::new();
     for entry in fs::read_dir(directory)? {
         let entry = entry?;

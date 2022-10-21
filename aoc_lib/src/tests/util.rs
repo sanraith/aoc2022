@@ -32,13 +32,15 @@ where
         .unwrap()
         .replace(input, "")
         .to_string();
-    (
-        T::new(),
-        Context {
-            raw_input: input,
-            ..Default::default()
-        },
-    )
+    let ctx = Context {
+        raw_input: input,
+        ..Default::default()
+    };
+    let mut day = T::new();
+    day.init(&ctx)
+        .expect("solution should initialize without errors");
+
+    (day, ctx)
 }
 
 pub fn setup_from_file<T>() -> (T, Context)
