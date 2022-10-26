@@ -1,4 +1,4 @@
-use crate::config::{self, Config};
+use crate::config::Config;
 use aoc::util::{day_str, GenericResult};
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
@@ -50,8 +50,15 @@ impl JoinText for scraper::element_ref::Text<'_> {
     }
 }
 
-pub fn scaffold_day(year: i32, day: u32) {
-    let session_key = get_session_key();
+pub fn scaffold_day(config: &Config, year: i32, day: u32) {
+    let session_key = match &config.session_key {
+        Some(key) => key.to_owned(),
+        None => {
+            println!("Please provide your session key in aoc_config.ini!");
+            return;
+        }
+    };
+
     println!("Scaffolding for year {} day {}... ", year, day);
     let mut puzzle_info = PuzzleInfo {
         year,
@@ -61,9 +68,17 @@ pub fn scaffold_day(year: i32, day: u32) {
     };
     parse_puzzle_info(&mut puzzle_info, &session_key);
 
-    generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, SOLUTION_DIR).unwrap();
-    generate_file(&puzzle_info, TEST_TEMPLATE_PATH, TEST_DIR).unwrap();
-    generate_file(&puzzle_info, INPUT_TEMPLATE_PATH, INPUT_DIR).unwrap();
+    let fs = generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, SOLUTION_DIR).unwrap();
+    let ft = generate_file(&puzzle_info, TEST_TEMPLATE_PATH, TEST_DIR).unwrap();
+    let fi = generate_file(&puzzle_info, INPUT_TEMPLATE_PATH, INPUT_DIR).unwrap();
+
+    if let Some(editor_name) = &config.editor_after_scaffold {
+        println!("Opening scaffolded files in {}...", editor_name);
+        Command::new("cmd")
+            .args(["/C", &editor_name, &fi, &ft, &fs])
+            .output()
+            .expect("open scaffolded files in editor");
+    }
 
     println!("Re-building to generate indexes...");
     Command::new("cargo")
@@ -129,35 +144,6 @@ fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
         .map_or(String::default(), |x| x.trim().to_owned());
 }
 
-fn get_session_key() -> String {
-    let config_path = config::DEFAULT_CONFIG_PATH;
-    let config = match Config::load_from_file(config_path) {
-        Ok(config) => config,
-        Err(_) => {
-            println!("Could not load session_key from '{}'", &config_path);
-            print!("Please provide your AOC session key: ");
-            std::io::stdout().flush().unwrap();
-
-            let mut session_key = String::new();
-            let stdin = std::io::stdin();
-            stdin
-                .read_line(&mut session_key)
-                .expect("reading session_key from user");
-
-            let config = Config {
-                session_key: session_key.trim().to_owned(),
-            };
-            config
-                .save_to_file(config_path)
-                .expect("saving config file");
-
-            config
-        }
-    };
-
-    config.session_key
-}
-
 fn request_cached(sub_url: &str, session_key: &str) -> GenericResult<String> {
     let cached_file_name = format!("{}.txt", sub_url.replace("/", "_"));
     let cached_file_path = Path::new(CACHE_DIR).join(cached_file_name);
@@ -194,13 +180,13 @@ fn generate_file(
     puzzle_info: &PuzzleInfo,
     template_path: &str,
     out_dir: &str,
-) -> GenericResult<()> {
+) -> GenericResult<String> {
     let mut contents = fs::read_to_string(template_path)?;
     replace_placeholders(&mut contents, &puzzle_info);
 
-    let (mut file, ..) = create_file(puzzle_info, template_path, out_dir)?;
+    let (mut file, path) = create_file(puzzle_info, template_path, out_dir)?;
     file.write_all(contents.as_bytes())?;
-    Ok(())
+    Ok(path.to_str().unwrap().to_owned())
 }
 
 fn create_file(
