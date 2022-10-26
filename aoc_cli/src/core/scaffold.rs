@@ -6,6 +6,7 @@ use std::borrow::Cow;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use url::Url;
 
 const CACHE_DIR: &'static str = ".cache";
@@ -63,6 +64,12 @@ pub fn scaffold_day(year: i32, day: u32) {
     generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, SOLUTION_DIR).unwrap();
     generate_file(&puzzle_info, TEST_TEMPLATE_PATH, TEST_DIR).unwrap();
     generate_file(&puzzle_info, INPUT_TEMPLATE_PATH, INPUT_DIR).unwrap();
+
+    println!("Re-building to generate indexes...");
+    Command::new("cargo")
+        .args(["build", "-p", "aoc_lib"])
+        .output()
+        .expect("builds without errors");
 
     println!("Ok.");
 }
@@ -157,7 +164,7 @@ fn request_cached(sub_url: &str, session_key: &str) -> GenericResult<String> {
     let url = Url::parse(BASE_URL)?.join(sub_url)?;
     if let Ok(s) = fs::read_to_string(&cached_file_path) {
         println!(
-            "Using cached file '{}' for {}",
+            "Using cached '{}' instead of {}",
             &cached_file_path.to_str().unwrap(),
             &url
         );
@@ -226,21 +233,22 @@ fn replace_placeholders(contents: &mut String, puzzle_info: &PuzzleInfo) {
         _ => Cow::from(&puzzle_info.example_input),
     };
 
-    replace_placeholder(contents, YEAR_PLACEHOLDER, &puzzle_info.year.to_string());
-    replace_placeholder(contents, DAY_PLACEHOLDER, &puzzle_info.day.to_string());
-    replace_placeholder(contents, TITLE_PLACEHOLDER, &puzzle_info.title);
-    replace_placeholder(contents, DAY_STR_PLACEHOLDER, &puzzle_info.day_str);
-    replace_placeholder(contents, EXAMPLE_INPUT_PLACEHOLDER, &formatted_input);
-    replace_placeholder(
-        contents,
-        EXAMPLE_PART_1_RESULT_PLACEHOLDER,
-        &puzzle_info.example_part1_result,
-    );
-    replace_placeholder(
-        contents,
-        PUZZLE_INPUT_PLACEHOLDER,
-        &puzzle_info.puzzle_input,
-    );
+    let replacements = [
+        (YEAR_PLACEHOLDER, &puzzle_info.year.to_string() as &str),
+        (DAY_PLACEHOLDER, &puzzle_info.day.to_string()),
+        (TITLE_PLACEHOLDER, &puzzle_info.title),
+        (DAY_STR_PLACEHOLDER, &puzzle_info.day_str),
+        (EXAMPLE_INPUT_PLACEHOLDER, &formatted_input),
+        (
+            EXAMPLE_PART_1_RESULT_PLACEHOLDER,
+            &puzzle_info.example_part1_result,
+        ),
+        (PUZZLE_INPUT_PLACEHOLDER, &puzzle_info.puzzle_input),
+    ];
+
+    for (placeholder, target) in replacements {
+        replace_placeholder(contents, placeholder, target);
+    }
 }
 
 fn replace_placeholder<'a>(

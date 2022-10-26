@@ -1,5 +1,6 @@
 use crate::core::solution::*;
 use regex::Regex;
+use std::fs;
 
 pub fn assert_result(result: SolutionResult, expected: &str, message: &str) {
     match result {
@@ -47,9 +48,15 @@ pub fn setup_from_file<T>() -> (T, Context)
 where
     T: Solution + SolutionStatic,
 {
-    let info = T::as_type().info;
-    let file_path = format!("../input/day{}.txt", info.day_str());
-    let input =
-        std::fs::read_to_string(&file_path).expect(&format!("reading input file '{}'", &file_path));
+    let day_str = T::as_type().info.day_str();
+    let input_paths = [
+        format!("../input/day{}.txt", day_str),
+        format!("input/day{}.txt", day_str),
+    ];
+    let input = input_paths
+        .iter()
+        .find_map(|p| fs::read_to_string(p).ok())
+        .expect(&format!("read input file from {:?}", input_paths));
+
     return setup::<T>(&input);
 }
