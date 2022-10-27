@@ -1,5 +1,5 @@
 use crate::solution::*;
-use crate::solutions::Day12;
+use crate::solutions::year2021::Day12;
 use crate::tests::util::*;
 
 #[test]

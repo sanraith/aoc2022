@@ -1,4 +1,4 @@
-use crate::{solution::*, solutions::Day01};
+use crate::{solution::*, solutions::year2021::Day01};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

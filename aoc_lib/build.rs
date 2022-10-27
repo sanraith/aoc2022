@@ -1,18 +1,19 @@
 use regex::Regex;
-use std::{borrow::Cow, error::Error, fs, io::Write};
+use std::{borrow::Cow, error::Error, fs, io::Write, path::PathBuf};
 
 type GenericResult<T> = Result<T, Box<dyn Error>>;
 
 const MODULE_DEFINITIONS_PLACEHOLDER: &'static str = "__MODULE_DEFINITIONS__";
 const SOLUTION_TYPE_LIST_PLACEHOLDER: &'static str = "__SOLUTION_TYPE_LIST__";
+const SOLUTION_TYPE_LIST_APPEND_PLACEHOLDER: &'static str = "__SOLUTION_TYPE_LIST_APPEND__";
 const RE_EXPORTS_PLACEHOLDER: &'static str = "__RE_EXPORTS__";
 
 const SOLUTION_DIRECTORY: &'static str = "src/solutions/";
-const SOLUTION_MODULE_PATH: &'static str = "src/solutions.rs";
-const SOLUTION_MODULE_TEMPLATE_PATH: &'static str = "templates/solution/solutions.rs.template";
+const SOLUTION_MODULE_NAME: &'static str = "mod.rs";
+const SOLUTION_MODULE_TEMPLATE_PATH: &'static str = "templates/solution/mod.rs.template";
 
 const TEST_DIRECTORY: &'static str = "src/tests/solutions/";
-const TEST_MODULE_PATH: &'static str = "src/tests/solutions.rs";
+const TEST_MODULE_NAME: &'static str = "mod.rs";
 const TEST_MODULE_TEMPLATE_PATH: &'static str = "templates/test/solutions.rs.template";
 
 fn main() {
@@ -24,27 +25,39 @@ fn main() {
 }
 
 fn generate_modules() -> GenericResult<()> {
-    generate_source_module()?;
-    generate_test_module()
+    generate_source_module(SOLUTION_DIRECTORY)?;
+    generate_test_module(TEST_DIRECTORY)
 }
 
-fn generate_source_module() -> GenericResult<()> {
+fn generate_source_module(solution_dir: &str) -> GenericResult<()> {
     let solution_module_re = Regex::new(r"^(day\S+).rs$")?;
     let struct_name_re = Regex::new(r"^[^/]*pub struct (Day[a-zA-Z0-9_]+)")?;
 
     let mut module_lines: Vec<String> = Vec::new();
     let mut export_lines: Vec<String> = Vec::new();
     let mut vec_lines: Vec<String> = Vec::new();
-    for (file_name, mod_name) in collect_modules_from_dir(SOLUTION_DIRECTORY, &solution_module_re)?
-    {
-        module_lines.push(format!("mod {};", mod_name));
+    let mut vec_append_lines: Vec<String> = Vec::new();
+    for (file_name, mod_name) in collect_modules_from_dir(solution_dir, &solution_module_re)? {
+        module_lines.push(format!("pub mod {};", mod_name));
 
-        let contents = fs::read_to_string(format!("{}/{}", SOLUTION_DIRECTORY, &file_name))?;
+        let contents = fs::read_to_string(format!("{}/{}", solution_dir, &file_name))?;
         for captures in struct_name_re.captures_iter(&contents) {
             let struct_name = &captures[1];
             export_lines.push(format!("pub use {mod_name}::{struct_name};"));
             vec_lines.push(format!("{struct_name}::as_type(),"))
         }
+    }
+
+    let directories = fs::read_dir(solution_dir)?
+        .filter_map(|x| x.ok())
+        .filter(|x| x.path().is_dir());
+    for entry in directories {
+        let path = entry.path();
+        let path_str = path.to_str().unwrap().to_owned();
+        generate_source_module(&path_str)?;
+        let mod_name = entry.file_name().to_str().unwrap().to_owned();
+        module_lines.push(format!("pub mod {};", mod_name));
+        vec_append_lines.push(format!("list.append(&mut {}::create_list());", mod_name));
     }
 
     let mut output = fs::read_to_string(SOLUTION_MODULE_TEMPLATE_PATH)?;
@@ -63,19 +76,36 @@ fn generate_source_module() -> GenericResult<()> {
         SOLUTION_TYPE_LIST_PLACEHOLDER,
         &vec_lines.join("\n"),
     );
+    replace_placeholder(
+        &mut output,
+        SOLUTION_TYPE_LIST_APPEND_PLACEHOLDER,
+        &vec_append_lines.join("\n"),
+    );
 
-    let mut file = std::fs::File::create(SOLUTION_MODULE_PATH)?;
+    let path = PathBuf::from_iter([solution_dir, SOLUTION_MODULE_NAME]);
+    let mut file = std::fs::File::create(path)?;
     file.write_all(output.as_bytes())?;
 
     Ok(())
 }
 
-fn generate_test_module() -> GenericResult<()> {
+fn generate_test_module(test_dir: &str) -> GenericResult<()> {
     let solution_module_re = Regex::new(r"^(day\S+_test).rs$")?;
-    let module_lines = collect_modules_from_dir(TEST_DIRECTORY, &solution_module_re)?
+    let mut module_lines = collect_modules_from_dir(test_dir, &solution_module_re)?
         .iter()
-        .map(|(_, mod_name)| format!("mod {};", mod_name))
+        .map(|(_, mod_name)| format!("pub mod {};", mod_name))
         .collect::<Vec<_>>();
+
+    let directories = fs::read_dir(test_dir)?
+        .filter_map(|x| x.ok())
+        .filter(|x| x.path().is_dir());
+    for entry in directories {
+        let path = entry.path();
+        let path_str = path.to_str().unwrap().to_owned();
+        generate_test_module(&path_str)?;
+        let mod_name = entry.file_name().to_str().unwrap().to_owned();
+        module_lines.push(format!("pub mod {};", mod_name));
+    }
 
     let mut output = fs::read_to_string(TEST_MODULE_TEMPLATE_PATH)?;
     replace_placeholder(
@@ -84,7 +114,8 @@ fn generate_test_module() -> GenericResult<()> {
         &module_lines.join("\n"),
     );
 
-    let mut file = std::fs::File::create(TEST_MODULE_PATH)?;
+    let path = PathBuf::from_iter([test_dir, TEST_MODULE_NAME]);
+    let mut file = std::fs::File::create(path)?;
     file.write_all(output.as_bytes())?;
 
     Ok(())
@@ -97,6 +128,10 @@ fn collect_modules_from_dir(
     let mut modules = Vec::new();
     for entry in fs::read_dir(directory)? {
         let entry = entry?;
+        if entry.path().is_dir() {
+            continue;
+        }
+
         let file_name = entry.file_name().into_string().unwrap();
         let mod_name = match solution_module_re
             .captures(&file_name)
