@@ -20,6 +20,6 @@ pub enum Command {
     /// Solve puzzles
     Solve {
         /// List of days to solve. Defaults to [all implemented days].
-        days: Vec<u8>,
+        days: Vec<u32>,
     },
 }

@@ -1,6 +1,6 @@
-use crate::core::solution::*;
+use crate::core::{file_util, solution::*};
 use regex::Regex;
-use std::fs;
+use std::{fs, path::PathBuf};
 
 pub fn assert_result(result: SolutionResult, expected: &str, message: &str) {
     match result {
@@ -48,13 +48,11 @@ pub fn setup_from_file<T>() -> (T, Context)
 where
     T: Solution + SolutionStatic,
 {
-    let day_str = T::as_type().info.day_str();
-    let input_paths = [
-        format!("../input/day{}.txt", day_str),
-        format!("input/day{}.txt", day_str),
-    ];
+    let file_path = file_util::input_file_path(&T::as_type().info);
+    let input_paths = [vec!["..", &file_path], vec![&file_path]];
     let input = input_paths
         .iter()
+        .map(|p| PathBuf::from_iter(p).to_str().unwrap().to_owned())
         .find_map(|p| fs::read_to_string(p).ok())
         .expect(&format!("read input file from {:?}", input_paths));
 

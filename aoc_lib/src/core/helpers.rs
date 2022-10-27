@@ -40,3 +40,13 @@ impl<'a, T> AsSome<'a, T> for Option<T> {
         self.as_mut().expect("option should have some value")
     }
 }
+
+pub trait Tap<T> {
+    fn tap<F: FnOnce(&T) -> ()>(self, f: F) -> T;
+}
+impl<T, E> Tap<Result<T, E>> for Result<T, E> {
+    fn tap<F: FnOnce(&Result<T, E>) -> ()>(self, f: F) -> Result<T, E> {
+        f(&self);
+        self
+    }
+}

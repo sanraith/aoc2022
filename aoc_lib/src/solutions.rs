@@ -10,9 +10,22 @@ pub use day12::Day12;
 
 // List of solutions
 use crate::solution::{SolutionStatic, SolutionType};
-pub fn solution_list() -> Vec<SolutionType> {
+fn solution_list() -> Vec<SolutionType> {
     vec![
         Day01::as_type(),
         Day12::as_type(),
     ]
+}
+
+// Map of solutions
+use crate::util::YearDay;
+use std::collections::HashMap;
+pub fn create_map() -> HashMap<YearDay, Vec<SolutionType>> {
+    let mut map = HashMap::new();
+    solution_list().into_iter().for_each(|x| {
+        let key = YearDay::new(x.info.year, x.info.day);
+        map.entry(key).or_insert_with(|| Vec::new()).push(x);
+    });
+
+    map
 }
