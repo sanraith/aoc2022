@@ -1,5 +1,5 @@
 use crate::config::Config;
-use aoc::util::{day_str, GenericResult};
+use aoc::util::{day_str, GenericResult, MsgError};
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
 use std::borrow::Cow;
@@ -203,7 +203,7 @@ fn create_file(
     .file_name()
     {
         Some(x) => x.to_str().unwrap().to_owned(),
-        None => return Err("Target path invalid".into()),
+        None => return Err(MsgError("Target path invalid").into()),
     };
 
     let target_file_path = Path::new(target_dir).join(&target_file_name);

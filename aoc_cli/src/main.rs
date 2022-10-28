@@ -33,8 +33,8 @@ fn main() {
                 .for_each(|d| solve::run_solution(&config, 2021, *d).unwrap())
         }
         None => {
-            println!("Default behavior");
-            solve::run_solution(&config, 2021, 1).unwrap();
+            println!("Solving all days of all years...");
+            solve::run_solutions(&config).unwrap();
         }
     }
 }

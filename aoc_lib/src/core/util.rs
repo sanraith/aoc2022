@@ -1,3 +1,8 @@
+use std::{
+    error::Error,
+    fmt::{self, Display},
+};
+
 #[derive(Eq, PartialEq, Hash, Default)]
 pub struct YearDay {
     pub year: i32,
@@ -15,3 +20,13 @@ pub fn day_str(day: u32) -> String {
 
 pub type DynError = Box<dyn std::error::Error>;
 pub type GenericResult<T = ()> = Result<T, DynError>;
+
+/// Simple error with a message
+#[derive(Debug, Clone)]
+pub struct MsgError<T: Clone + Display + fmt::Debug>(pub T);
+impl<T: Clone + Display + fmt::Debug> Error for MsgError<T> {}
+impl<T: Clone + Display + fmt::Debug> fmt::Display for MsgError<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", &self.0)
+    }
+}
