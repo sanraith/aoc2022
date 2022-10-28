@@ -1,4 +1,6 @@
 use crate::config::Config;
+use aoc::core::file_util;
+use aoc::solution::SolutionInfo;
 use aoc::util::{day_str, GenericResult, MsgError};
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
@@ -18,8 +20,6 @@ const SOLUTION_TEMPLATE_PATH: &'static str =
 
 const TEST_DIR: &'static str = "aoc_lib/src/tests/solutions/";
 const TEST_TEMPLATE_PATH: &'static str = "aoc_lib/templates/test/day__DAY_STR___test.rs.template";
-
-const INPUT_DIR: &'static str = "input/";
 const INPUT_TEMPLATE_PATH: &'static str = "aoc_lib/templates/input/day__DAY_STR__.txt.template";
 
 const DAY_PLACEHOLDER: &'static str = "__DAY__";
@@ -39,6 +39,15 @@ struct PuzzleInfo {
     puzzle_input: String,
     example_input: String,
     example_part1_result: String,
+}
+impl<'a> From<&PuzzleInfo> for SolutionInfo {
+    fn from(p: &PuzzleInfo) -> Self {
+        SolutionInfo {
+            year: p.year,
+            day: p.day,
+            title: p.title.to_owned(),
+        }
+    }
 }
 
 trait JoinText {
@@ -70,7 +79,16 @@ pub fn scaffold_day(config: &Config, year: i32, day: u32) {
 
     let fs = generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, SOLUTION_DIR).unwrap();
     let ft = generate_file(&puzzle_info, TEST_TEMPLATE_PATH, TEST_DIR).unwrap();
-    let fi = generate_file(&puzzle_info, INPUT_TEMPLATE_PATH, INPUT_DIR).unwrap();
+    let fi = generate_file(
+        &puzzle_info,
+        INPUT_TEMPLATE_PATH,
+        PathBuf::from(file_util::input_file_path(&(&puzzle_info).into()))
+            .parent()
+            .unwrap()
+            .to_str()
+            .unwrap(),
+    )
+    .unwrap();
 
     if let Some(editor_name) = &config.editor_after_scaffold {
         println!("Opening scaffolded files in {}...", editor_name);
@@ -208,6 +226,11 @@ fn create_file(
 
     let target_file_path = Path::new(target_dir).join(&target_file_name);
     println!("Scaffolding: {}", target_file_path.to_str().unwrap());
+    fs::create_dir_all(
+        target_file_path
+            .parent()
+            .ok_or(MsgError("create directory for file"))?,
+    )?;
     let file = File::create(&target_file_path)?;
 
     Ok((file, target_file_path))

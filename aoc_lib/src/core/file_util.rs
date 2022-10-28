@@ -8,8 +8,12 @@ pub fn input_file_name(info: &SolutionInfo) -> String {
 }
 
 pub fn input_file_path(info: &SolutionInfo) -> String {
-    PathBuf::from_iter([INPUT_PATH, &input_file_name(info)])
-        .to_str()
-        .unwrap()
-        .to_owned()
+    PathBuf::from_iter([
+        INPUT_PATH,
+        &format!("year{}", info.year),
+        &input_file_name(info),
+    ])
+    .to_str()
+    .unwrap()
+    .to_owned()
 }

@@ -18,11 +18,15 @@ pub type Title = SolutionInfo;
 pub struct SolutionInfo {
     pub year: i32,
     pub day: u32,
-    pub title: &'static str,
+    pub title: String,
 }
 impl SolutionInfo {
     pub fn new(year: i32, day: u32, title: &'static str) -> Self {
-        SolutionInfo { year, day, title }
+        SolutionInfo {
+            year,
+            day,
+            title: title.to_owned(),
+        }
     }
 
     /// Day as string with 0..1 preceding zeros.
