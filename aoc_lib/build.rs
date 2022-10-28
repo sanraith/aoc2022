@@ -11,7 +11,7 @@ const RE_EXPORTS_PLACEHOLDER: &'static str = "__RE_EXPORTS__";
 
 const SOLUTION_DIRECTORY: &'static str = "src/solutions/";
 const SOLUTION_MODULE_TEMPLATE_PATH: &'static str = "templates/solution/mod.rs.template";
-const TEST_DIRECTORY: &'static str = "src/tests/solutions/";
+const TEST_DIRECTORY: &'static str = "src/tests";
 const TEST_MODULE_TEMPLATE_PATH: &'static str = "templates/test/mod.rs.template";
 const RELATIVE_MODULE_FILE_NAME: &'static str = "../__MODULE_NAME__.rs";
 
@@ -102,6 +102,23 @@ fn generate_test_module(test_dir: &str) -> GenericResult<()> {
         generate_test_module(&path_str)?;
         let mod_name = entry.file_name().to_str().unwrap().to_owned();
         module_lines.push(format!("pub mod {};", mod_name));
+    }
+
+    let file_prefix_regex = Regex::new(r"(.*)\..*").unwrap();
+    let files = fs::read_dir(test_dir)?
+        .filter_map(|x| x.ok())
+        .filter(|x| x.path().is_file());
+    for entry in files {
+        let file_name = entry.file_name().to_str().unwrap().to_owned();
+        let mod_name = file_prefix_regex
+            .captures(&file_name)
+            .and_then(|x| x.get(1))
+            .and_then(|x| Some(x.as_str()))
+            .unwrap();
+        let new_line = format!("pub mod {};", mod_name);
+        if !module_lines.contains(&new_line) {
+            module_lines.push(new_line);
+        }
     }
 
     let mut output = fs::read_to_string(TEST_MODULE_TEMPLATE_PATH)?;

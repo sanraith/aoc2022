@@ -9,10 +9,7 @@ pub mod core {
 pub mod solutions;
 
 #[cfg(test)]
-mod tests {
-    mod solutions;
-    mod util;
-}
+mod tests;
 
 // Re-exports
 pub use crate::core::helpers;
