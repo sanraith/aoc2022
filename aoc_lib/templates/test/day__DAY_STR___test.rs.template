@@ -1,5 +1,5 @@
 use crate::solution::*;
-use crate::solutions::day__DAY_STR__::Day__DAY_STR__;
+use crate::solutions::year__YEAR__::Day__DAY_STR__;
 use crate::tests::util::*;
 
 #[test]

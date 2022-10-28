@@ -77,8 +77,17 @@ pub fn scaffold_day(config: &Config, year: i32, day: u32) {
     };
     parse_puzzle_info(&mut puzzle_info, &session_key);
 
-    let fs = generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, SOLUTION_DIR).unwrap();
-    let ft = generate_file(&puzzle_info, TEST_TEMPLATE_PATH, TEST_DIR).unwrap();
+    let get_dir = |base_dir: &str| -> String {
+        PathBuf::from_iter([base_dir, &file_util::year_directory_name(year)])
+            .to_str()
+            .unwrap()
+            .to_owned()
+    };
+
+    let solution_dir = get_dir(SOLUTION_DIR);
+    let test_dir = get_dir(TEST_DIR);
+    let fs = generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, &solution_dir).unwrap();
+    let ft = generate_file(&puzzle_info, TEST_TEMPLATE_PATH, &test_dir).unwrap();
     let fi = generate_file(
         &puzzle_info,
         INPUT_TEMPLATE_PATH,
@@ -109,10 +118,10 @@ pub fn scaffold_day(config: &Config, year: i32, day: u32) {
 
 fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
     let input_url = format!("{}/day/{}/input", puzzle_info.year, puzzle_info.day);
-    puzzle_info.puzzle_input = request_cached(&input_url, session_key).unwrap();
+    puzzle_info.puzzle_input = request_cached(&input_url, session_key).unwrap_or(String::default());
 
     let description_url = format!("{}/day/{}", puzzle_info.year, puzzle_info.day);
-    let html = request_cached(&description_url, session_key).unwrap();
+    let html = request_cached(&description_url, session_key).unwrap_or(String::default());
     let html = Html::parse_document(&html);
 
     let title_re = Regex::new(r".*: (.*) ---").unwrap();
