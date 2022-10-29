@@ -1,5 +1,6 @@
 use aoc::util::*;
 use aoc_cli::{args::*, config::*, scaffold, solve, timing};
+use aoc_ui;
 use clap::Parser;
 use clearscreen;
 
@@ -33,8 +34,9 @@ fn main() {
                 .for_each(|d| solve::run_solution(&config, 2021, *d).unwrap())
         }
         None => {
-            println!("Solving all days of all years...");
-            solve::run_solutions(&config).unwrap();
+            aoc_ui::main();
+            // println!("Solving all days of all years...");
+            // solve::run_solutions(&config).unwrap();
         }
     }
 }

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
+aoc-ui = { path = "../aoc-ui" }
 arboard = { version = "3.1.1", features = [] }
 chrono = "0.4.22"
 clap = { version = "4.0.11", features = ["derive"] }
