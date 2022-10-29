@@ -14,13 +14,13 @@ use url::Url;
 const CACHE_DIR: &'static str = ".cache";
 const BASE_URL: &'static str = "https://adventofcode.com/";
 
-const SOLUTION_DIR: &'static str = "aoc_lib/src/solutions/";
+const SOLUTION_DIR: &'static str = "aoc-lib/src/solutions/";
 const SOLUTION_TEMPLATE_PATH: &'static str =
-    "aoc_lib/templates/solution/day__DAY_STR__.rs.template";
+    "aoc-lib/templates/solution/day__DAY_STR__.rs.template";
 
-const TEST_DIR: &'static str = "aoc_lib/src/tests/solutions/";
-const TEST_TEMPLATE_PATH: &'static str = "aoc_lib/templates/test/day__DAY_STR___test.rs.template";
-const INPUT_TEMPLATE_PATH: &'static str = "aoc_lib/templates/input/day__DAY_STR__.txt.template";
+const TEST_DIR: &'static str = "aoc-lib/src/tests/solutions/";
+const TEST_TEMPLATE_PATH: &'static str = "aoc-lib/templates/test/day__DAY_STR___test.rs.template";
+const INPUT_TEMPLATE_PATH: &'static str = "aoc-lib/templates/input/day__DAY_STR__.txt.template";
 
 const DAY_PLACEHOLDER: &'static str = "__DAY__";
 const YEAR_PLACEHOLDER: &'static str = "__YEAR__";
@@ -109,7 +109,7 @@ pub fn scaffold_day(config: &Config, year: i32, day: u32) {
 
     println!("Re-building to generate indexes...");
     Command::new("cargo")
-        .args(["build", "-p", "aoc_lib"])
+        .args(["build", "-p", "aoc-lib"])
         .output()
         .expect("builds without errors");
 

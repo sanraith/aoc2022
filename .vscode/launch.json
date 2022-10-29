@@ -7,16 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'aoc_cli'",
+            "name": "Debug unit tests in library 'aoc-cli'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=aoc_cli"
+                    "--package=aoc-cli"
                 ],
                 "filter": {
-                    "name": "aoc_cli",
+                    "name": "aoc-cli",
                     "kind": "lib"
                 }
             },
@@ -26,15 +26,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'aoc_cli'",
+            "name": "Debug executable 'aoc-cli'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=aoc_cli",
-                    "--package=aoc_cli"
+                    "--bin=aoc-cli",
+                    "--package=aoc-cli"
                 ],
                 "filter": {
-                    "name": "aoc_cli",
+                    "name": "aoc-cli",
                     "kind": "bin"
                 }
             },
@@ -44,16 +44,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'aoc_cli'",
+            "name": "Debug unit tests in executable 'aoc-cli'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=aoc_cli",
-                    "--package=aoc_cli"
+                    "--bin=aoc-cli",
+                    "--package=aoc-cli"
                 ],
                 "filter": {
-                    "name": "aoc_cli",
+                    "name": "aoc-cli",
                     "kind": "bin"
                 }
             },
@@ -69,7 +69,7 @@
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=aoc_lib"
+                    "--package=aoc-lib"
                 ],
                 "filter": {
                     "name": "aoc",

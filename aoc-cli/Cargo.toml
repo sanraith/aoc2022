@@ -1,10 +1,10 @@
 [package]
-name = "aoc_cli"
+name = "aoc-cli"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aoc_lib = { path = "../aoc_lib" }
+aoc-lib = { path = "../aoc-lib" }
 arboard = { version = "3.1.1", features = [] }
 chrono = "0.4.22"
 clap = { version = "4.0.11", features = ["derive"] }

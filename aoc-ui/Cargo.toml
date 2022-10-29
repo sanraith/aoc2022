@@ -1,8 +1,8 @@
 [package]
-name = "aoc_ui"
+name = "aoc-ui"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-aoc_lib = { path = "../aoc_lib" }
+aoc-lib = { path = "../aoc-lib" }
 bracket-terminal = "0.8.7"

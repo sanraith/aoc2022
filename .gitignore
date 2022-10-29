@@ -1,9 +1,9 @@
 
 # --- RUST ---
-# Local cache for aoc_cli
+# Local cache for aoc-cli
 /.cache
 
-# Local configuration file for aoc_cli
+# Local configuration file for aoc-cli
 /aoc_config.ini
 
 # will have compiled files and executables
