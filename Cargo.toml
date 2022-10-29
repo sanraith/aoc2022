@@ -1,2 +1,2 @@
 [workspace]
-members = ["aoc_cli", "aoc_lib"]
+members = ["aoc_cli", "aoc_lib", "aoc_ui"]
