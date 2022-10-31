@@ -81,8 +81,7 @@ fn generate_source_module(solution_dir: &str) -> GenericResult<()> {
     );
 
     let path = get_module_file_name(solution_dir);
-    let mut file = std::fs::File::create(path)?;
-    file.write_all(output.as_bytes())?;
+    save_file(path, output)?;
 
     Ok(())
 }
@@ -129,9 +128,21 @@ fn generate_test_module(test_dir: &str) -> GenericResult<()> {
     );
 
     let path = get_module_file_name(test_dir);
-    let mut file = std::fs::File::create(path)?;
-    file.write_all(output.as_bytes())?;
+    save_file(path, output)?;
 
+    Ok(())
+}
+
+fn save_file(path: PathBuf, output: String) -> GenericResult<()> {
+    if let Ok(current) = fs::read_to_string(&path) {
+        // Do not replace if the only differences are line endings
+        if current.replace("\r\n", "\n") == output.replace("\r\n", "\n") {
+            return Ok(());
+        }
+    }
+
+    let mut file = fs::File::create(&path)?;
+    file.write_all(output.as_bytes())?;
     Ok(())
 }
 
