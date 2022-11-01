@@ -7,6 +7,7 @@
         "Datelike",
         "itertools",
         "Pathing",
+        "rngs",
         "rustup",
         "sanraith",
         "ureq"
