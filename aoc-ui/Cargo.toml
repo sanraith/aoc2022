@@ -9,4 +9,6 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 aoc-lib = { path = "../aoc-lib" }
 bracket-terminal = "=0.8.5"
+getrandom = { version = "0.2.8", features = ["js"] }
+rand = "0.8.5"
 wasm-bindgen = "0.2"
