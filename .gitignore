@@ -16,6 +16,8 @@
 **/pkg
 
 # --- NODE ---
+/dist
+
 # dependencies
 /node_modules
 /.pnp

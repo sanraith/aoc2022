@@ -1,19 +1,29 @@
 {
     "name": "aoc2022",
     "version": "1.0.0",
+    "author": "Soma Zsják",
     "description": "Solutions for Advent of Code 2022 in Rust with a complementary web runner.",
-    "main": "index.js",
-    "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
     "repository": {
         "type": "git",
         "url": "git+https://github.com/sanraith/aoc2022.git"
     },
-    "author": "Soma Zsják",
     "license": "MIT",
+    "homepage": "https://github.com/sanraith/aoc2022#readme",
     "bugs": {
         "url": "https://github.com/sanraith/aoc2022/issues"
     },
-    "homepage": "https://github.com/sanraith/aoc2022#readme"
+    "scripts": {
+        "build": "webpack",
+        "serve": "webpack serve"
+    },
+    "dependencies": {},
+    "devDependencies": {
+        "@wasm-tool/wasm-pack-plugin": "^1.6.0",
+        "css-loader": "^6.7.1",
+        "html-webpack-plugin": "^5.5.0",
+        "style-loader": "^3.3.1",
+        "webpack": "^5.74.0",
+        "webpack-cli": "^4.10.0",
+        "webpack-dev-server": "^4.11.1"
+    }
 }
