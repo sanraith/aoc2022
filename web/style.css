@@ -1,0 +1,43 @@
+:root {
+    --term-width: calc(16px * 90);
+    --term-height: calc(16px * 50);
+}
+
+body {
+    background-color: #202020;
+    margin: 0;
+    height: 100%;
+    color: whitesmoke;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translateY(-50%) translateX(-50%);
+    width: var(--term-width);
+    height: var(--term-height);
+
+    border: 5px solid darkgreen;
+    border-radius: 5px;
+}
+
+.container {
+    position: relative;
+    width: var(--term-width);
+    height: var(--term-height);
+    background-color: black;
+}
+
+.canvas-placeholder {
+    position: absolute;
+    top: 0;
+    padding-left: 2em;
+}
+
+#canvas {
+    position: absolute;
+    top: 0;
+    display: block;
+}

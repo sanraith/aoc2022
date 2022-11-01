@@ -10,7 +10,8 @@ Solutions for Advent of Code 2022 in Rust with a complementary web runner.
 
 ## WASM build
 
-- Build only: `npm run build`
+- Build site: `npm run build`
+- Build rust source only: `wasm-pack build --target web --out-dir ../web/pkg aoc-ui`
 - Local web-server: `npm run serve`
 
 ## Attributions

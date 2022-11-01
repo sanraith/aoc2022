@@ -5,6 +5,7 @@ const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const WEB_DIR = 'web';
 
 module.exports = {
+    mode: 'production',
     entry: path.resolve(__dirname, WEB_DIR, 'app.js'),
     output: {
         path: path.resolve(__dirname, 'dist'),
@@ -20,10 +21,6 @@ module.exports = {
             outDir: path.resolve(WEB_DIR, 'pkg')
         })
     ],
-    mode: 'development',
-    experiments: {
-        asyncWebAssembly: true
-    },
     module: {
         rules: [
             {
@@ -32,4 +29,14 @@ module.exports = {
             },
         ],
     },
+    devServer: {
+        watchFiles: [path.resolve(__dirname, WEB_DIR, '*')]
+    },
+    experiments: {
+        asyncWebAssembly: true
+    },
+    performance: {
+        maxAssetSize: 5 * 1024 * 1024,
+        maxEntrypointSize: 5 * 1024 * 1024
+    }
 };
