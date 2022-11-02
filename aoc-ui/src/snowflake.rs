@@ -52,10 +52,10 @@ pub struct SnowflakeManager {
     config: Config,
 }
 impl SnowflakeManager {
-    pub fn new(config: &Config) -> Self {
+    pub fn new(config: Config) -> Self {
         SnowflakeManager {
+            config,
             snowflakes: Default::default(),
-            config: config.to_owned(),
         }
     }
 

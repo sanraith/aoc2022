@@ -30,6 +30,6 @@ pub fn main() {
         .build()
         .expect("terminal should build");
 
-    let gs = UiState::new(&config);
+    let gs = UiState::new(config);
     main_loop(context, gs).expect("main loop should run");
 }

@@ -38,11 +38,11 @@ impl GameState for UiState {
     }
 }
 impl UiState {
-    pub fn new(config: &Config) -> Self {
+    pub fn new(config: Config) -> Self {
         UiState {
-            config: config.to_owned(),
+            config,
             total_time: 0.0,
-            snowflake_manager: SnowflakeManager::new(&config),
+            snowflake_manager: SnowflakeManager::new(config),
         }
     }
 
