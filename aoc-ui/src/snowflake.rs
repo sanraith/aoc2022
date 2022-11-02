@@ -1,4 +1,7 @@
-use crate::{config::Config, util::get_mouse_tile_pos};
+use crate::{
+    config::Config,
+    util::{distance2d_pythagoras_f32, get_mouse_tile_pos},
+};
 use bracket_terminal::prelude::*;
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 use std::{cell::RefCell, rc::Rc};
@@ -20,6 +23,8 @@ struct Snowflake {
     max_x: f32,
     max_y: f32,
 
+    /// Used to spice up sin() output for different y values
+    seed: f32,
     pos: PointF,
     elapsed: f32,
     done: bool,
@@ -31,7 +36,7 @@ impl Snowflake {
         self.pos.y = self.base.y + elapsed_seconds * self.vy;
 
         self.pos.x = (self.base.x
-            + (self.base.x + self.elapsed / 300.0 * self.v_sin_x).sin() * self.d_sin_x
+            + (self.seed + self.elapsed / 300.0 * self.v_sin_x).sin() * self.d_sin_x
             + elapsed_seconds * self.vx)
             % self.max_x
             - 0.5;
@@ -91,9 +96,8 @@ impl SnowflakeManager {
         let influence = 10.0;
         let power = 20.0;
         let mp = get_mouse_tile_pos(&self.config.borrow());
-        let mp = Point::from_tuple((mp.x as i32, mp.y as i32));
         for flake in self.snowflakes.iter_mut() {
-            let d = DistanceAlg::Pythagoras.distance2d(flake.pos.into(), mp);
+            let d = distance2d_pythagoras_f32(flake.pos, mp);
             let direction_x = if flake.pos.x > mp.x as f32 { 1 } else { -1 } as f32;
             let direction_y = if flake.pos.y > mp.y as f32 { 1 } else { -1 } as f32;
             if mouse_active && d < influence {
@@ -131,6 +135,7 @@ impl SnowflakeManager {
             rot: rng.gen_range(0.0..180.0),
             v_rot: rng.gen_range(-180.0..180.0),
             scale: rng.gen_range(0.25..1.0),
+            seed: rng.gen_range(0.0..1000.0),
             ..Default::default()
         });
     }
