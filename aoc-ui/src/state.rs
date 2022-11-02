@@ -1,8 +1,9 @@
-use crate::{config::Config, snowflake::SnowflakeManager};
+use crate::{config::Config, entry, snowflake::SnowflakeManager, util::get_mouse_tile_pos};
 use bracket_terminal::prelude::*;
+use std::{cell::RefCell, rc::Rc};
 
 pub struct UiState {
-    config: Config,
+    config: Rc<RefCell<Config>>,
     total_time: f32,
     snowflake_manager: SnowflakeManager,
 }
@@ -27,6 +28,16 @@ impl GameState for UiState {
         fancy_batch.target(1);
         fancy_batch.cls();
 
+        // Apply config changes from javascript
+        let outside_config = entry::JS_CONFIG.lock().unwrap();
+        if outside_config.scale > 0.0 {
+            normal_batch.print(
+                Point::from_tuple((1, 5)),
+                format!("Scale: {:.3}", outside_config.scale),
+            );
+            (*self.config.borrow_mut()).scale = outside_config.scale as f32;
+        }
+
         self.snowflake_manager.tick(ctx, &mut fancy_batch);
         self.handle_status(ctx, &mut normal_batch);
         self.handle_mouse(&mut fancy_batch);
@@ -38,10 +49,11 @@ impl GameState for UiState {
 }
 impl UiState {
     pub fn new(config: Config) -> Self {
+        let config = Rc::from(RefCell::new(config));
         UiState {
-            config,
+            config: Rc::clone(&config),
+            snowflake_manager: SnowflakeManager::new(Rc::clone(&config)),
             total_time: 0.0,
-            snowflake_manager: SnowflakeManager::new(config),
         }
     }
 
@@ -52,11 +64,11 @@ impl UiState {
     }
 
     fn handle_mouse(&self, batch: &mut DrawBatch) {
-        let (x, y) = INPUT.lock().mouse_pixel_pos();
+        let mp = get_mouse_tile_pos(&self.config.borrow());
         batch.set_fancy(
             PointF {
-                x: x as f32 / self.config.tile_size_x as f32 - 0.4,
-                y: y as f32 / self.config.tile_size_y as f32 + 0.2,
+                x: mp.x - 0.4,
+                y: mp.y,
             },
             0,
             Degrees::new(0.0),

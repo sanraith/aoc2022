@@ -1,6 +1,7 @@
-use crate::config::Config;
+use crate::{config::Config, util::get_mouse_tile_pos};
 use bracket_terminal::prelude::*;
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
+use std::{cell::RefCell, rc::Rc};
 
 const SNOWFLAKE_COLOR: (u8, u8, u8, u8) = (255, 255, 255, 200);
 
@@ -56,10 +57,10 @@ impl Snowflake {
 
 pub struct SnowflakeManager {
     snowflakes: Vec<Snowflake>,
-    config: Config,
+    config: Rc<RefCell<Config>>,
 }
 impl SnowflakeManager {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Rc<RefCell<Config>>) -> Self {
         SnowflakeManager {
             config,
             snowflakes: Default::default(),
@@ -67,7 +68,7 @@ impl SnowflakeManager {
     }
 
     pub fn tick(&mut self, ctx: &BTerm, batch: &mut DrawBatch) {
-        let Config { width, height, .. } = self.config;
+        let Config { width, height, .. } = *self.config.borrow();
         let mut rng = rand::thread_rng();
         let width_die = Uniform::from(0.0..width as f32);
         let height_die = Uniform::from(0.0..1.0);
@@ -89,7 +90,8 @@ impl SnowflakeManager {
         };
         let influence = 10.0;
         let power = 20.0;
-        let mp = INPUT.lock().mouse_tile(0);
+        let mp = get_mouse_tile_pos(&self.config.borrow());
+        let mp = Point::from_tuple((mp.x as i32, mp.y as i32));
         for flake in self.snowflakes.iter_mut() {
             let d = DistanceAlg::Pythagoras.distance2d(flake.pos.into(), mp);
             let direction_x = if flake.pos.x > mp.x as f32 { 1 } else { -1 } as f32;

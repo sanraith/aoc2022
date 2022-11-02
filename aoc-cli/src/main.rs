@@ -34,7 +34,7 @@ fn main() {
                 .for_each(|d| solve::run_solution(&config, 2021, *d).unwrap())
         }
         None => {
-            aoc_ui::entry::main();
+            _ = aoc_ui::entry::main();
             // println!("Solving all days of all years...");
             // solve::run_solutions(&config).unwrap();
         }

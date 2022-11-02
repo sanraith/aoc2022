@@ -1,6 +1,6 @@
 import './style.css';
 
-function resize() {
+function resize(rust) {
     const cellSize = 16;
     const targetWidth = 90 * cellSize;
     const targetHeight = 50 * cellSize;
@@ -22,6 +22,9 @@ function resize() {
     let r = document.querySelector(':root');
     r.style.setProperty('--term-width', width + 'px');
     r.style.setProperty('--term-height', height + 'px');
+
+    rust.set_scale(width / targetWidth);
+    console.log(width / targetWidth);
 }
 
 function onError(err) {
@@ -38,15 +41,16 @@ function onError(err) {
 }
 
 async function start() {
-    window.addEventListener('resize', () => resize());
-    resize();
-
+    let rust;
     try {
-        const rust = await require('./pkg');
+        rust = await require('./pkg');
         rust.main_wasm();
     } catch (err) {
         onError(err);
     }
+
+    window.addEventListener('resize', () => resize(rust));
+    resize(rust);
 }
 
 start();
