@@ -9,6 +9,16 @@ pub struct UiState {
 impl GameState for UiState {
     fn tick(&mut self, ctx: &mut BTerm) {
         self.total_time += ctx.frame_time_ms;
+
+        // Exit on Q or Esc key
+        if let Some(key) = ctx.key {
+            match key {
+                VirtualKeyCode::Q => ctx.quit(),
+                VirtualKeyCode::Escape => ctx.quit(),
+                _ => (),
+            }
+        }
+
         let mut normal_batch = DrawBatch::new();
         normal_batch.target(0);
         normal_batch.cls();

@@ -107,6 +107,7 @@ version = "0.1.0"
 dependencies = [
  "aoc-lib",
  "bracket-terminal",
+ "console_error_panic_hook",
  "getrandom 0.2.8",
  "rand 0.8.5",
  "wasm-bindgen",

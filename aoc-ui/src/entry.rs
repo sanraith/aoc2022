@@ -6,6 +6,11 @@ use bracket_terminal::prelude::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+pub fn main_wasm() {
+    console_error_panic_hook::set_once();
+    main()
+}
+
 pub fn main() {
     let config = config::default();
     let Config {
@@ -26,5 +31,5 @@ pub fn main() {
         .expect("terminal should build");
 
     let gs = UiState::new(&config);
-    main_loop(context, gs).unwrap();
+    main_loop(context, gs).expect("main loop should run");
 }

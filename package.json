@@ -14,11 +14,12 @@
     },
     "scripts": {
         "build": "webpack",
+        "release": "webpack --env mode=production",
         "serve": "webpack serve"
     },
-    "dependencies": {},
     "devDependencies": {
         "@wasm-tool/wasm-pack-plugin": "^1.6.0",
+        "copy-webpack-plugin": "^11.0.0",
         "css-loader": "^6.7.1",
         "html-webpack-plugin": "^5.5.0",
         "style-loader": "^3.3.1",
