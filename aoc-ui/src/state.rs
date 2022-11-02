@@ -45,13 +45,10 @@ impl UiState {
         }
     }
 
-    fn handle_status(&self, ctx: &mut BTerm, batch: &mut DrawBatch) {
-        let status = format!(
-            "{:>3} FPS, runtime: {}s",
-            ctx.fps as i32,
-            (self.total_time / 1000.0) as i32
-        );
-        batch.print(Point::from_tuple((1, 2)), status);
+    fn handle_status(&self, ctx: &BTerm, batch: &mut DrawBatch) {
+        batch.print(Point::from_tuple((1, 2)), "Advent of Code 2022");
+        let status = format!("FPS: {:>2}", ctx.fps as i32);
+        batch.print(Point::from_tuple((1, 4)), status);
     }
 
     fn handle_mouse(&self, batch: &mut DrawBatch) {

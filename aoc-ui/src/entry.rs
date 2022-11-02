@@ -6,12 +6,14 @@ use bracket_terminal::prelude::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn main_wasm() {
+pub fn main_wasm() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
-    main()
+    main().map_err(|x| JsValue::from(format!("{:?}", x)))?;
+
+    Ok(())
 }
 
-pub fn main() {
+pub fn main() -> BResult<()> {
     let config = config::default();
     let Config {
         width,
@@ -27,9 +29,10 @@ pub fn main() {
         .with_dimensions(width, height)
         .with_tile_dimensions(tile_size_x, tile_size_y)
         .with_fancy_console(width, height, "terminal8x8.png")
-        .build()
-        .expect("terminal should build");
+        .build()?;
 
     let gs = UiState::new(config);
-    main_loop(context, gs).expect("main loop should run");
+    main_loop(context, gs)?;
+
+    Ok(())
 }

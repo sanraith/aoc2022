@@ -30,14 +30,24 @@ body {
     background-color: black;
 }
 
-.canvas-placeholder {
+#canvas-placeholder {
     position: absolute;
     top: 0;
-    padding-left: 2em;
+    width: var(--term-width);
+    height: var(--term-height);
+    padding: 2em 2em;
+}
+
+#canvas-placeholder h1 {
+    text-align: center;
+    font-size: 32px;
+    font-weight: bold;
 }
 
 #canvas {
     position: absolute;
     top: 0;
     display: block;
+    width: var(--term-width);
+    height: var(--term-height);
 }
