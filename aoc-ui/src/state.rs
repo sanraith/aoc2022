@@ -29,7 +29,6 @@ impl GameState for UiState {
 
         self.snowflake_manager.tick(ctx, &mut fancy_batch);
         self.handle_status(ctx, &mut normal_batch);
-        self.handle_borders(&mut normal_batch);
         self.handle_mouse(&mut fancy_batch);
 
         fancy_batch.submit(2).expect("Render error");
@@ -59,29 +58,14 @@ impl UiState {
         let (x, y) = INPUT.lock().mouse_pixel_pos();
         batch.set_fancy(
             PointF {
-                x: x as f32 / self.config.tile_size_x as f32 - 0.5,
-                y: y as f32 / self.config.tile_size_y as f32 + 0.5,
+                x: x as f32 / self.config.tile_size_x as f32 - 0.4,
+                y: y as f32 / self.config.tile_size_y as f32 + 0.2,
             },
             0,
             Degrees::new(0.0),
             PointF::new(1.0, 1.0),
             ColorPair::new(WHITE, RGBA::from_u8(0, 0, 0, 0)),
-            to_cp437('X'),
+            to_cp437('.'),
         );
-    }
-
-    fn handle_borders(&mut self, batch: &mut DrawBatch) {
-        let Config { width, height, .. } = self.config;
-        for y in 0..height {
-            for x in 0..width {
-                if x == 0 || y == 0 || x == width - 1 || y == height - 1 {
-                    if (y + x + ((self.total_time / 500.0) as u32 % 2)) % 2 == 0 {
-                        batch.print(Point::from_tuple((x, y)), "*");
-                    } else {
-                        batch.print(Point::from_tuple((x, y)), ".");
-                    }
-                }
-            }
-        }
     }
 }
