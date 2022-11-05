@@ -109,6 +109,7 @@ dependencies = [
  "bracket-terminal",
  "console_error_panic_hook",
  "getrandom 0.2.8",
+ "image 0.24.4",
  "once_cell",
  "rand 0.8.5",
  "wasm-bindgen",
