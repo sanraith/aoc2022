@@ -14,7 +14,6 @@ impl GameState for UiState {
         // Exit on Q or Esc key
         if let Some(key) = ctx.key {
             match key {
-                VirtualKeyCode::Q => ctx.quit(),
                 VirtualKeyCode::Escape => ctx.quit(),
                 _ => (),
             }

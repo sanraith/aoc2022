@@ -1,4 +1,5 @@
 use crate::{
+    char_image::{self, CHARACTER_IMAGES},
     config::Config,
     util::{distance2d_pythagoras_f32, get_mouse_tile_pos},
 };
@@ -60,15 +61,33 @@ impl Snowflake {
     }
 }
 
+struct TargetedSnowflake {
+    flake: Snowflake,
+    target: FlakeTarget,
+    reached_target: bool,
+}
+
+struct FlakeTarget {
+    pos: PointF,
+    char_idx: usize,
+}
+
 pub struct SnowflakeManager {
     snowflakes: Vec<Snowflake>,
     config: Rc<RefCell<Config>>,
+
+    text: Vec<char>,
+    text_flakes: Vec<TargetedSnowflake>,
+    text_flake_queue: Vec<FlakeTarget>,
 }
 impl SnowflakeManager {
     pub fn new(config: Rc<RefCell<Config>>) -> Self {
         SnowflakeManager {
             config,
             snowflakes: Default::default(),
+            text: Default::default(),
+            text_flakes: Default::default(),
+            text_flake_queue: Default::default(),
         }
     }
 
@@ -81,6 +100,10 @@ impl SnowflakeManager {
         let snowflakes_count = 400;
 
         self.snowflakes.retain(|x| !x.done);
+
+        self.handle_input(batch);
+        self.handle_input_flakes(ctx, batch);
+
         let height_die = match self.snowflakes.len() {
             0 => height_starter_die, // distribute flakes vertically initially
             _ => height_die,         // spawn new ones at the top
@@ -97,7 +120,7 @@ impl SnowflakeManager {
         let power = 20.0;
         let mp = get_mouse_tile_pos(&self.config.borrow());
         for flake in self.snowflakes.iter_mut() {
-            let d = distance2d_pythagoras_f32(flake.pos, mp);
+            let d = distance2d_pythagoras_f32(&flake.pos, &mp);
             let direction_x = if flake.pos.x > mp.x as f32 { 1 } else { -1 } as f32;
             let direction_y = if flake.pos.y > mp.y as f32 { 1 } else { -1 } as f32;
             if mouse_active && d < influence {
@@ -110,6 +133,131 @@ impl SnowflakeManager {
 
             flake.progress(ctx);
             flake.draw(batch)
+        }
+    }
+
+    fn handle_input(&mut self, batch: &mut DrawBatch) {
+        let text_base_x = 1;
+        let text_base_y = 10;
+
+        INPUT.lock().for_each_message(|event| {
+            match event {
+                BEvent::KeyboardInput {
+                    key: VirtualKeyCode::Back,
+                    pressed: true,
+                    ..
+                } => {
+                    self.text.pop();
+                }
+                BEvent::KeyboardInput {
+                    key: VirtualKeyCode::Return,
+                    pressed: true,
+                    ..
+                } => {
+                    self.text.clear();
+                    self.text_flake_queue.clear();
+                    self.text_flakes.clear();
+                }
+                BEvent::Character { c } if char_image::CHARACTER_IMAGES.contains_key(&c) => {
+                    self.text.push(c);
+                    let image = CHARACTER_IMAGES
+                        .get(&c)
+                        .or_else(|| CHARACTER_IMAGES.get(&' '))
+                        .expect("character image available");
+
+                    let pixels = image.rows.iter().enumerate().flat_map(|(y, row)| {
+                        row.iter()
+                            .enumerate()
+                            .filter(|(_, &pixel)| pixel > 127)
+                            .map(move |(x, _)| (x, y))
+                    });
+                    for (x, y) in pixels {
+                        self.text_flake_queue.push(FlakeTarget {
+                            pos: PointF {
+                                x: text_base_x as f32
+                                    + (self.text.len() - 1) as f32
+                                    + x as f32 / char_image::CHAR_WIDTH as f32
+                                    - 0.5,
+                                y: text_base_y as f32
+                                    + y as f32 / char_image::CHAR_HEIGHT as f32
+                                    + 0.5,
+                            },
+                            char_idx: self.text.len() - 1,
+                        })
+                    }
+                }
+                _ => (),
+            };
+        });
+
+        for (idx, c) in self.text.iter().enumerate() {
+            let is_waiting = self
+                .text_flakes
+                .iter()
+                .any(|f| f.target.char_idx == idx && !f.reached_target)
+                || self.text_flake_queue.iter().any(|f| f.char_idx == idx);
+            if !is_waiting {
+                batch.print(
+                    Point::from_tuple((text_base_x + idx, text_base_y)),
+                    c.to_string(),
+                );
+                self.text_flakes.retain(|f| f.target.char_idx != idx);
+            }
+        }
+    }
+
+    fn handle_input_flakes(&mut self, ctx: &BTerm, batch: &mut DrawBatch) {
+        let influence = 50.0;
+        while let Some(target) = self.text_flake_queue.first() {
+            if let Some((idx, ..)) = self
+                .snowflakes
+                .iter()
+                .enumerate()
+                .filter(|(_, a)| distance2d_pythagoras_f32(&target.pos, &a.pos) <= influence)
+                // .into_sorted_by(|(_, a), (_, b)| {
+                //     distance2d_pythagoras_f32(&target.pos, &a.pos)
+                //         .partial_cmp(&distance2d_pythagoras_f32(&target.pos, &b.pos))
+                //         .unwrap()
+                // })
+                .collect::<Vec<_>>()
+                .first()
+            {
+                let mut flake = self.snowflakes.remove(*idx);
+                let target = self.text_flake_queue.remove(0);
+                flake.vy = 0.0; // TODO this resets the position, rewrite flakes to be more mutable
+                flake.vx = 0.0;
+                flake.d_sin_x = 0.1;
+                flake.v_sin_x = 0.1;
+                flake.scale = 0.35;
+                self.text_flakes.push(TargetedSnowflake {
+                    flake,
+                    target,
+                    reached_target: false,
+                });
+            } else {
+                break;
+            }
+        }
+
+        let power = 2.0;
+        // let power_min = 5.0;
+        for targeted in self.text_flakes.iter_mut() {
+            let flake = &mut targeted.flake;
+            let target = &targeted.target.pos;
+
+            flake.vx_extra = ((target.x - flake.pos.x) * power)
+                // .min(power_min)
+                .max(target.x - flake.pos.x);
+            flake.vy_extra = ((target.y - flake.pos.y) * power)
+                // .min(power_min)
+                .max(target.y - flake.pos.y);
+
+            flake.progress(ctx);
+            flake.draw(batch);
+
+            if distance2d_pythagoras_f32(&flake.pos, &target) < 0.1 {
+                targeted.reached_target = true;
+            }
         }
     }
 

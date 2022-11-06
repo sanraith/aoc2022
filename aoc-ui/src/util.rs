@@ -10,7 +10,7 @@ pub fn get_mouse_tile_pos(config: &Config) -> PointF {
     }
 }
 
-pub fn distance2d_pythagoras_f32(start: PointF, end: PointF) -> f32 {
+pub fn distance2d_pythagoras_f32(start: &PointF, end: &PointF) -> f32 {
     let dx = (start.x.max(end.x) - start.x.min(end.x)) as f32;
     let dy = (start.y.max(end.y) - start.y.min(end.y)) as f32;
     ((dx * dx) + (dy * dy)).sqrt()
