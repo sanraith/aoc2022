@@ -98,7 +98,6 @@ version = "0.1.0"
 dependencies = [
  "num",
  "regex",
- "wasm-bindgen",
 ]
 
 [[package]]

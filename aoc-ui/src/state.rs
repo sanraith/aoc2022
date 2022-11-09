@@ -11,7 +11,7 @@ impl GameState for UiState {
     fn tick(&mut self, ctx: &mut BTerm) {
         self.total_time += ctx.frame_time_ms;
 
-        // Exit on Q or Esc key
+        // Exit on Esc key
         if let Some(key) = ctx.key {
             match key {
                 VirtualKeyCode::Escape => ctx.quit(),
