@@ -1,6 +1,8 @@
-pub mod config;
-pub mod entry;
+pub mod animation;
 pub mod char_image;
+pub mod config;
+pub mod drawing;
+pub mod entry;
 pub mod resources;
 pub mod snowflake;
 pub mod state;
