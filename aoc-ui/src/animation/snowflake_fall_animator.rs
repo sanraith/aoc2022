@@ -1,5 +1,5 @@
-use super::animator::{Animator, AnimatorBase};
-use crate::drawing::snowflake::Snowflake;
+use super::animator::{AnimationState, Animator, AnimatorBase};
+use crate::drawing::drawing_base::Drawable;
 use bracket_terminal::prelude::BTerm;
 use std::{
     cell::RefCell,
@@ -7,9 +7,9 @@ use std::{
     rc::Rc,
 };
 
-pub struct SnowflakeFallAnimator {
+pub struct SnowflakeFallAnimator<T: Drawable> {
     pub base: AnimatorBase,
-    pub target: Rc<RefCell<Snowflake>>,
+    pub target: Rc<RefCell<T>>,
 
     pub d_sin_x: f32,
     pub v_sin_x: f32,
@@ -25,12 +25,13 @@ pub struct SnowflakeFallAnimator {
     pub last_sin: f32,
 }
 
-impl Animator<Snowflake> for SnowflakeFallAnimator {
+impl<T: Drawable> Animator for SnowflakeFallAnimator<T> {
     fn tick(&mut self, ctx: &BTerm) {
         self.total_elapsed += ctx.frame_time_ms;
         let elapsed_seconds = ctx.frame_time_ms / 1000.0;
 
-        let mut target = self.target.borrow_mut();
+        let mut target_ = self.target.borrow_mut();
+        let mut target = target_.base_mut();
         target.pos.y += elapsed_seconds * self.vy;
 
         let sin = (self.seed + self.total_elapsed / 300.0 * self.v_sin_x).sin() * self.d_sin_x;
@@ -42,16 +43,15 @@ impl Animator<Snowflake> for SnowflakeFallAnimator {
         target.rotation %= 360.0;
     }
 
-    fn is_completed(&self) -> bool {
-        self.target.borrow().pos.y >= self.max_y
-    }
-
-    fn get_target(&self) -> Rc<RefCell<Snowflake>> {
-        Rc::clone(&self.target)
+    fn state(&self) -> AnimationState {
+        match self.target.borrow().base().pos.y >= self.max_y {
+            true => AnimationState::Completed,
+            false => AnimationState::Running,
+        }
     }
 }
 
-impl Default for SnowflakeFallAnimator {
+impl<T: Drawable + Default> Default for SnowflakeFallAnimator<T> {
     fn default() -> Self {
         Self {
             base: Default::default(),
@@ -69,14 +69,14 @@ impl Default for SnowflakeFallAnimator {
     }
 }
 
-impl Deref for SnowflakeFallAnimator {
+impl<T: Drawable> Deref for SnowflakeFallAnimator<T> {
     type Target = AnimatorBase;
 
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
-impl DerefMut for SnowflakeFallAnimator {
+impl<T: Drawable> DerefMut for SnowflakeFallAnimator<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }

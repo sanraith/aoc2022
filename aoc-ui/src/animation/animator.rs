@@ -16,8 +16,18 @@ impl Default for AnimatorBase {
     }
 }
 
-pub trait Animator<T> {
+pub trait Animator {
     fn tick(&mut self, ctx: &BTerm);
-    fn is_completed(&self) -> bool;
+    fn state(&self) -> AnimationState;
+}
+
+pub trait TargetedAnimator<T> {
     fn get_target(&self) -> Rc<RefCell<T>>;
+}
+
+#[derive(PartialEq, Eq)]
+pub enum AnimationState {
+    Completed,
+    Running,
+    RunningForever,
 }

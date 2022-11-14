@@ -1,4 +1,6 @@
-use crate::{config::Config, entry, snowflake::SnowflakeManager, util::get_mouse_tile_pos};
+use crate::{
+    config::Config, entry, manager::snowflake_manager::SnowflakeManager, util::get_mouse_tile_pos,
+};
 use bracket_terminal::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 

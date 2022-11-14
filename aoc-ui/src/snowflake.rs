@@ -72,7 +72,7 @@ struct FlakeTarget {
     char_idx: usize,
 }
 
-pub struct SnowflakeManager {
+pub struct SnowflakeManagerOld {
     snowflakes: Vec<Snowflake>,
     config: Rc<RefCell<Config>>,
 
@@ -80,9 +80,9 @@ pub struct SnowflakeManager {
     text_flakes: Vec<TargetedSnowflake>,
     text_flake_queue: Vec<FlakeTarget>,
 }
-impl SnowflakeManager {
+impl SnowflakeManagerOld {
     pub fn new(config: Rc<RefCell<Config>>) -> Self {
-        SnowflakeManager {
+        SnowflakeManagerOld {
             config,
             snowflakes: Default::default(),
             text: Default::default(),

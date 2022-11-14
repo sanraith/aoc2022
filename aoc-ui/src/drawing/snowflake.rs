@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 
 #[derive(Default)]
 pub struct Snowflake {
-    base: DrawingBase,
+    pub base: DrawingBase,
 }
 impl Drawable for Snowflake {
     fn draw(&self, _ctx: &BTerm, batch: &mut DrawBatch) {
@@ -18,6 +18,13 @@ impl Drawable for Snowflake {
             ColorPair::new(color, RGBA::from_u8(0, 0, 0, 0)),
             to_cp437('*'),
         );
+    }
+
+    fn base(&self) -> &DrawingBase {
+        &self.base
+    }
+    fn base_mut(&mut self) -> &mut DrawingBase {
+        &mut self.base
     }
 }
 

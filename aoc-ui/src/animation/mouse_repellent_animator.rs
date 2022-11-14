@@ -1,7 +1,7 @@
-use super::animator::{Animator, AnimatorBase};
+use super::animator::{AnimationState, Animator, AnimatorBase};
 use crate::{
     config::Config,
-    drawing::drawing_base::DrawingBase,
+    drawing::drawing_base::Drawable,
     util::{distance2d_pythagoras_f32, get_mouse_tile_pos},
 };
 use bracket_terminal::prelude::*;
@@ -11,13 +11,13 @@ use std::{
     rc::Rc,
 };
 
-pub struct MouseRepellentAnimator {
-    base: AnimatorBase,
-    target: Rc<RefCell<DrawingBase>>,
-    config: Rc<RefCell<Config>>,
+pub struct MouseRepellentAnimator<T: Drawable> {
+    pub base: AnimatorBase,
+    pub target: Rc<RefCell<T>>,
+    pub config: Rc<RefCell<Config>>,
 }
 
-impl Animator<DrawingBase> for MouseRepellentAnimator {
+impl<T: Drawable> Animator for MouseRepellentAnimator<T> {
     fn tick(&mut self, ctx: &BTerm) {
         let elapsed_seconds = ctx.frame_time_ms / 1000.0;
         let mouse_active = match INPUT.lock().mouse_pixel_pos() {
@@ -28,7 +28,8 @@ impl Animator<DrawingBase> for MouseRepellentAnimator {
         let power = 20.0;
         let mp = get_mouse_tile_pos(&self.config.borrow());
 
-        let mut target = self.target.borrow_mut();
+        let mut target_ = self.target.borrow_mut();
+        let mut target = target_.base_mut();
         let d = distance2d_pythagoras_f32(&target.pos, &mp);
         let direction_x = if target.pos.x > mp.x as f32 { 1 } else { -1 } as f32;
         let direction_y = if target.pos.y > mp.y as f32 { 1 } else { -1 } as f32;
@@ -38,22 +39,18 @@ impl Animator<DrawingBase> for MouseRepellentAnimator {
         }
     }
 
-    fn is_completed(&self) -> bool {
-        false
-    }
-
-    fn get_target(&self) -> Rc<RefCell<DrawingBase>> {
-        Rc::clone(&self.target)
+    fn state(&self) -> AnimationState {
+        AnimationState::RunningForever
     }
 }
 
-impl Deref for MouseRepellentAnimator {
+impl<T: Drawable> Deref for MouseRepellentAnimator<T> {
     type Target = AnimatorBase;
     fn deref(&self) -> &Self::Target {
         &self.base
     }
 }
-impl DerefMut for MouseRepellentAnimator {
+impl<T: Drawable> DerefMut for MouseRepellentAnimator<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.base
     }

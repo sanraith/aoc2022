@@ -23,4 +23,6 @@ impl Default for DrawingBase {
 
 pub trait Drawable {
     fn draw(&self, ctx: &BTerm, batch: &mut DrawBatch);
+    fn base(&self) -> &DrawingBase;
+    fn base_mut(&mut self) -> &mut DrawingBase;
 }

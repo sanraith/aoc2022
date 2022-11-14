@@ -3,6 +3,7 @@ pub mod char_image;
 pub mod config;
 pub mod drawing;
 pub mod entry;
+pub mod manager;
 pub mod resources;
 pub mod snowflake;
 pub mod state;
