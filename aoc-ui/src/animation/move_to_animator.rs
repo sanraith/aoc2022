@@ -14,7 +14,7 @@ pub struct MoveToAnimator<T: Drawable> {
     end_delta: f32,
     v: f32,
 }
-impl<T: Drawable> Animator for MoveToAnimator<T> {
+impl<T: Drawable + 'static> Animator for MoveToAnimator<T> {
     fn tick(&mut self, ctx: &BTerm) {
         self.total_elapsed += ctx.frame_time_ms;
         let elapsed_seconds = ctx.frame_time_ms / 1000.0;
@@ -34,6 +34,10 @@ impl<T: Drawable> Animator for MoveToAnimator<T> {
             true => AnimationState::Completed,
             false => AnimationState::Running,
         }
+    }
+
+    fn into_animator(self) -> Box<dyn Animator> {
+        Box::new(self)
     }
 }
 

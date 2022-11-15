@@ -1,4 +1,4 @@
-use super::animator::{AnimationState, Animator, AnimatorBase, Targeted};
+use super::animator::{AnimationState, Animator, AnimatorBase, TargetedAnimator};
 use crate::{
     config::Config,
     drawing::drawing_base::Drawable,
@@ -17,7 +17,7 @@ pub struct MouseRepellentAnimator<T: Drawable> {
     pub config: Rc<RefCell<Config>>,
 }
 
-impl<T: Drawable> Animator for MouseRepellentAnimator<T> {
+impl<T: Drawable + 'static> Animator for MouseRepellentAnimator<T> {
     fn tick(&mut self, ctx: &BTerm) {
         let elapsed_seconds = ctx.frame_time_ms / 1000.0;
         let mouse_active = match INPUT.lock().mouse_pixel_pos() {
@@ -42,9 +42,13 @@ impl<T: Drawable> Animator for MouseRepellentAnimator<T> {
     fn state(&self) -> AnimationState {
         AnimationState::RunningForever
     }
+
+    fn into_animator(self) -> Box<dyn Animator> {
+        Box::new(self)
+    }
 }
 
-impl<T: Drawable> Targeted<T> for MouseRepellentAnimator<T> {
+impl<T: Drawable + 'static> TargetedAnimator<T> for MouseRepellentAnimator<T> {
     fn get_target(&self) -> Rc<RefCell<T>> {
         Rc::clone(&self.target)
     }

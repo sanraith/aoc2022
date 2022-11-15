@@ -1,6 +1,6 @@
 use crate::{
     animation::{
-        animator::{AnimationState, Animator, AnimatorBase, Targeted, TargetedAnimator},
+        animator::{AnimationState, Animator, AnimatorBase, TargetedAnimator},
         animator_group::AnimatorGroup,
         mouse_repellent_animator::MouseRepellentAnimator,
         snowflake_fall_animator::SnowflakeFallAnimator,
@@ -15,7 +15,7 @@ use bracket_terminal::prelude::{BTerm, DrawBatch, PointF};
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 use std::{cell::RefCell, rc::Rc};
 
-pub struct AnimatedItem<T> {
+pub struct AnimatedItem<T: 'static> {
     pub item: Rc<RefCell<T>>,
     pub animators: Vec<Box<dyn TargetedAnimator<T>>>,
     pub keep_after_animations: bool,
@@ -45,22 +45,22 @@ impl SnowflakeManager {
         });
         self.create_snowflakes();
 
-        // let mut random_flake = self
-        //     .snowflakes
-        //     .swap_remove(rand::thread_rng().gen_range(0..self.snowflakes.len()));
+        let mut random_flake = self
+            .snowflakes
+            .swap_remove(rand::thread_rng().gen_range(0..self.snowflakes.len()));
 
-        // let mut to_group = Vec::new();
-        // while random_flake.animators.len() > 0 {
-        //     // TODO get owned trait object instead of trait ref
-        //     let x = random_flake.animators.pop().unwrap().as_animator();
-        //     to_group.push(x);
-        // }
-        // let group = AnimatorGroup::new(random_flake.item, to_group);
+        let mut to_group = Vec::new();
+        while random_flake.animators.len() > 0 {
+            // TODO get owned trait object instead of trait ref
+            // let x = random_flake.animators.pop().unwrap().into_animator();
+            // to_group.push(x);
+        }
+        let group = AnimatorGroup::new(random_flake.item, to_group);
 
-        // for flake in self.snowflakes.iter_mut() {
-        //     flake.animators.iter_mut().for_each(|a| a.tick(ctx));
-        //     flake.item.borrow().draw(ctx, batch);
-        // }
+        for flake in self.snowflakes.iter_mut() {
+            flake.animators.iter_mut().for_each(|a| a.tick(ctx));
+            flake.item.borrow().draw(ctx, batch);
+        }
     }
 
     fn create_snowflakes(&mut self) {

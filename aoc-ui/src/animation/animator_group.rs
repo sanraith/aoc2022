@@ -1,4 +1,4 @@
-use super::animator::{AnimationState, Animator, AnimatorBase, Targeted};
+use super::animator::{AnimationState, Animator, AnimatorBase, TargetedAnimator};
 use bracket_terminal::prelude::BTerm;
 use std::{
     cell::RefCell,
@@ -22,7 +22,7 @@ impl<T> AnimatorGroup<T> {
     }
 }
 
-impl<T> Animator for AnimatorGroup<T> {
+impl<T: 'static> Animator for AnimatorGroup<T> {
     fn tick(&mut self, ctx: &BTerm) {
         for animator in self.animators.iter_mut() {
             animator.tick(ctx);
@@ -43,9 +43,13 @@ impl<T> Animator for AnimatorGroup<T> {
         }
         state
     }
+
+    fn into_animator(self) -> Box<dyn Animator> {
+        Box::new(self)
+    }
 }
 
-impl<T> Targeted<T> for AnimatorGroup<T> {
+impl<T: 'static> TargetedAnimator<T> for AnimatorGroup<T> {
     fn get_target(&self) -> Rc<RefCell<T>> {
         Rc::clone(&self.target)
     }

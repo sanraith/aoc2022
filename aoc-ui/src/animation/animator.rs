@@ -19,19 +19,11 @@ impl Default for AnimatorBase {
 pub trait Animator {
     fn tick(&mut self, ctx: &BTerm);
     fn state(&self) -> AnimationState;
+    fn into_animator(self) -> Box<dyn Animator>;
 }
 
-pub trait Targeted<T> {
+pub trait TargetedAnimator<T>: Animator {
     fn get_target(&self) -> Rc<RefCell<T>>;
-}
-
-pub trait TargetedAnimator<T>: Animator + Targeted<T> {
-    // fn as_animator(self) -> Box<dyn Animator>;
-}
-impl<T: Animator + Targeted<V>, V> TargetedAnimator<V> for T {
-    // fn as_animator(self) -> Box<dyn Animator> {
-    //     Box::from(self)
-    // }
 }
 
 #[derive(PartialEq, Eq)]

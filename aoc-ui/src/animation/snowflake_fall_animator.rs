@@ -1,4 +1,4 @@
-use super::animator::{AnimationState, Animator, AnimatorBase, Targeted};
+use super::animator::{AnimationState, Animator, AnimatorBase, TargetedAnimator};
 use crate::drawing::drawing_base::Drawable;
 use bracket_terminal::prelude::BTerm;
 use std::{
@@ -25,7 +25,7 @@ pub struct SnowflakeFallAnimator<T: Drawable> {
     pub last_sin: f32,
 }
 
-impl<T: Drawable> Animator for SnowflakeFallAnimator<T> {
+impl<T: Drawable + 'static> Animator for SnowflakeFallAnimator<T> {
     fn tick(&mut self, ctx: &BTerm) {
         self.total_elapsed += ctx.frame_time_ms;
         let elapsed_seconds = ctx.frame_time_ms / 1000.0;
@@ -49,9 +49,13 @@ impl<T: Drawable> Animator for SnowflakeFallAnimator<T> {
             false => AnimationState::Running,
         }
     }
+
+    fn into_animator(self) -> Box<dyn Animator> {
+        Box::new(self)
+    }
 }
 
-impl<T: Drawable> Targeted<T> for SnowflakeFallAnimator<T> {
+impl<T: Drawable + 'static> TargetedAnimator<T> for SnowflakeFallAnimator<T> {
     fn get_target(&self) -> Rc<RefCell<T>> {
         Rc::clone(&self.target)
     }

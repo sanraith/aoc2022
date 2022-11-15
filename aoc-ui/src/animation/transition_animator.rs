@@ -7,7 +7,11 @@ use std::{
     rc::Rc,
 };
 
-pub struct TransitionAnimator<T1: Animator + Targeted<V>, T2: Animator + Targeted<V>, V: Drawable> {
+pub struct TransitionAnimator<
+    T1: Animator + TargetedAnimator<V>,
+    T2: Animator + TargetedAnimator<V>,
+    V: Drawable,
+> {
     pub base: AnimatorBase,
     pub a: T1,
     pub b: T2,
@@ -16,7 +20,7 @@ pub struct TransitionAnimator<T1: Animator + Targeted<V>, T2: Animator + Targete
     pub elapsed: f32,
 }
 
-impl<T1: Animator + Targeted<V>, T2: Animator + Targeted<V>, V: Drawable>
+impl<T1: Animator + TargetedAnimator<V>, T2: Animator + TargetedAnimator<V>, V: Drawable>
     TransitionAnimator<T1, T2, V>
 {
     pub fn new(
@@ -44,8 +48,11 @@ impl<T1: Animator + Targeted<V>, T2: Animator + Targeted<V>, V: Drawable>
     }
 }
 
-impl<T1: Animator + Targeted<V>, T2: Animator + Targeted<V>, V: Drawable> Animator
-    for TransitionAnimator<T1, T2, V>
+impl<
+        T1: Animator + TargetedAnimator<V> + 'static,
+        T2: Animator + TargetedAnimator<V> + 'static,
+        V: Drawable + 'static,
+    > Animator for TransitionAnimator<T1, T2, V>
 {
     fn tick(&mut self, ctx: &BTerm) {
         self.elapsed += ctx.frame_time_ms;
@@ -76,9 +83,13 @@ impl<T1: Animator + Targeted<V>, T2: Animator + Targeted<V>, V: Drawable> Animat
             false => AnimationState::Running,
         }
     }
+
+    fn into_animator(self) -> Box<dyn Animator> {
+        Box::new(self)
+    }
 }
 
-impl<T1: Animator + Targeted<V>, T2: Animator + Targeted<V>, V: Drawable> Deref
+impl<T1: Animator + TargetedAnimator<V>, T2: Animator + TargetedAnimator<V>, V: Drawable> Deref
     for TransitionAnimator<T1, T2, V>
 {
     type Target = AnimatorBase;
@@ -86,7 +97,7 @@ impl<T1: Animator + Targeted<V>, T2: Animator + Targeted<V>, V: Drawable> Deref
         &self.base
     }
 }
-impl<T1: Animator + Targeted<V>, T2: Animator + Targeted<V>, V: Drawable> DerefMut
+impl<T1: Animator + TargetedAnimator<V>, T2: Animator + TargetedAnimator<V>, V: Drawable> DerefMut
     for TransitionAnimator<T1, T2, V>
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
