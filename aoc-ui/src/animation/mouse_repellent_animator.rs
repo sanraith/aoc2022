@@ -1,4 +1,4 @@
-use super::animator::{AnimationState, Animator, AnimatorBase};
+use super::animator::{AnimationState, Animator, AnimatorBase, Targeted};
 use crate::{
     config::Config,
     drawing::drawing_base::Drawable,
@@ -41,6 +41,12 @@ impl<T: Drawable> Animator for MouseRepellentAnimator<T> {
 
     fn state(&self) -> AnimationState {
         AnimationState::RunningForever
+    }
+}
+
+impl<T: Drawable> Targeted<T> for MouseRepellentAnimator<T> {
+    fn get_target(&self) -> Rc<RefCell<T>> {
+        Rc::clone(&self.target)
     }
 }
 

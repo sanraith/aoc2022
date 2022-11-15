@@ -1,4 +1,4 @@
-use super::animator::{AnimationState, Animator, AnimatorBase};
+use super::animator::{AnimationState, Animator, AnimatorBase, Targeted};
 use crate::drawing::drawing_base::Drawable;
 use bracket_terminal::prelude::BTerm;
 use std::{
@@ -48,6 +48,12 @@ impl<T: Drawable> Animator for SnowflakeFallAnimator<T> {
             true => AnimationState::Completed,
             false => AnimationState::Running,
         }
+    }
+}
+
+impl<T: Drawable> Targeted<T> for SnowflakeFallAnimator<T> {
+    fn get_target(&self) -> Rc<RefCell<T>> {
+        Rc::clone(&self.target)
     }
 }
 

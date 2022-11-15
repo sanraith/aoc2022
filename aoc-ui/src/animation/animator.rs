@@ -21,8 +21,17 @@ pub trait Animator {
     fn state(&self) -> AnimationState;
 }
 
-pub trait TargetedAnimator<T> {
+pub trait Targeted<T> {
     fn get_target(&self) -> Rc<RefCell<T>>;
+}
+
+pub trait TargetedAnimator<T>: Animator + Targeted<T> {
+    // fn as_animator(self) -> Box<dyn Animator>;
+}
+impl<T: Animator + Targeted<V>, V> TargetedAnimator<V> for T {
+    // fn as_animator(self) -> Box<dyn Animator> {
+    //     Box::from(self)
+    // }
 }
 
 #[derive(PartialEq, Eq)]
