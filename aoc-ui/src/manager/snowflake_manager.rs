@@ -1,6 +1,6 @@
 use crate::{
     animation::{
-        animator::{AnimationState, Animator, AnimatorBase, TargetedAnimator},
+        animator::{AnimationState, Animator},
         animator_group::AnimatorGroup,
         mouse_repellent_animator::MouseRepellentAnimator,
         snowflake_fall_animator::SnowflakeFallAnimator,
@@ -15,9 +15,11 @@ use bracket_terminal::prelude::{BTerm, DrawBatch, PointF};
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 use std::{cell::RefCell, rc::Rc};
 
-pub struct AnimatedItem<T: 'static> {
-    pub item: Rc<RefCell<T>>,
-    pub animators: Vec<Box<dyn TargetedAnimator<T>>>,
+const SNOWFLAKE_COUNT: usize = 400;
+
+pub struct AnimatedItem<T> {
+    pub item: T,
+    pub animators: Vec<Box<dyn Animator<T>>>,
     pub keep_after_animations: bool,
 }
 
@@ -45,21 +47,25 @@ impl SnowflakeManager {
         });
         self.create_snowflakes();
 
+        // Test animator grouping
         let mut random_flake = self
             .snowflakes
             .swap_remove(rand::thread_rng().gen_range(0..self.snowflakes.len()));
-
         let mut to_group = Vec::new();
         while random_flake.animators.len() > 0 {
-            // TODO get owned trait object instead of trait ref
-            // let x = random_flake.animators.pop().unwrap().into_animator();
-            // to_group.push(x);
+            to_group.push(random_flake.animators.pop().unwrap());
         }
-        let group = AnimatorGroup::new(random_flake.item, to_group);
+        let group = Box::new(AnimatorGroup::new(to_group));
+        random_flake.animators.push(group);
+        self.snowflakes.push(random_flake);
+        // end test animator grouping
 
         for flake in self.snowflakes.iter_mut() {
-            flake.animators.iter_mut().for_each(|a| a.tick(ctx));
-            flake.item.borrow().draw(ctx, batch);
+            flake
+                .animators
+                .iter_mut()
+                .for_each(|a| a.tick(ctx, &mut flake.item));
+            flake.item.draw(ctx, batch);
         }
     }
 
@@ -69,7 +75,7 @@ impl SnowflakeManager {
         let width_die = Uniform::from(0.0..width as f32);
         let height_die = Uniform::from(0.0..1.0);
         let height_starter_die = Uniform::from(0.0..height as f32);
-        let snowflakes_count = 400;
+        let snowflakes_count = SNOWFLAKE_COUNT;
         let height_die = match self.snowflakes.len() {
             0 => height_starter_die, // distribute flakes vertically initially
             _ => height_die,         // spawn new ones at the top
@@ -87,7 +93,7 @@ impl SnowflakeManager {
         max_x: u32,
         max_y: u32,
     ) {
-        let flake = Rc::from(RefCell::from(Snowflake {
+        let flake = Snowflake {
             base: DrawingBase {
                 pos: PointF {
                     x: width_die.sample(rng),
@@ -97,14 +103,9 @@ impl SnowflakeManager {
                 rotation: rng.gen_range(0.0..180.0),
                 ..Default::default()
             },
-        }));
+        };
 
         let fall_animator = SnowflakeFallAnimator {
-            base: AnimatorBase {
-                start_pos: flake.borrow().pos.clone(),
-                ..Default::default()
-            },
-            target: Rc::clone(&flake),
             d_sin_x: rng.gen_range(0.1..1.0),
             v_sin_x: rng.gen_range(0.2..0.7),
             vx: rng.gen_range(-1.5..1.5),
@@ -116,8 +117,6 @@ impl SnowflakeManager {
         };
 
         let mouse_animator = MouseRepellentAnimator {
-            base: Default::default(),
-            target: Rc::clone(&flake),
             config: Rc::clone(&self.config),
         };
 

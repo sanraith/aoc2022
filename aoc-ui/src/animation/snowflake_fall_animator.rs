@@ -1,16 +1,8 @@
-use super::animator::{AnimationState, Animator, AnimatorBase, TargetedAnimator};
+use super::animator::{AnimationState, Animator};
 use crate::drawing::drawing_base::Drawable;
 use bracket_terminal::prelude::BTerm;
-use std::{
-    cell::RefCell,
-    ops::{Deref, DerefMut},
-    rc::Rc,
-};
 
-pub struct SnowflakeFallAnimator<T: Drawable> {
-    pub base: AnimatorBase,
-    pub target: Rc<RefCell<T>>,
-
+pub struct SnowflakeFallAnimator {
     pub d_sin_x: f32,
     pub v_sin_x: f32,
     /** delta x / second */
@@ -23,15 +15,17 @@ pub struct SnowflakeFallAnimator<T: Drawable> {
     pub max_y: f32,
 
     pub last_sin: f32,
+    pub total_elapsed: f32,
+    pub seed: f32,
+    pub state: AnimationState,
 }
 
-impl<T: Drawable + 'static> Animator for SnowflakeFallAnimator<T> {
-    fn tick(&mut self, ctx: &BTerm) {
+impl<T: Drawable> Animator<T> for SnowflakeFallAnimator {
+    fn tick(&mut self, ctx: &BTerm, target: &mut T) {
         self.total_elapsed += ctx.frame_time_ms;
         let elapsed_seconds = ctx.frame_time_ms / 1000.0;
 
-        let mut target_ = self.target.borrow_mut();
-        let mut target = target_.base_mut();
+        let mut target = target.base_mut();
         target.pos.y += elapsed_seconds * self.vy;
 
         let sin = (self.seed + self.total_elapsed / 300.0 * self.v_sin_x).sin() * self.d_sin_x;
@@ -41,31 +35,21 @@ impl<T: Drawable + 'static> Animator for SnowflakeFallAnimator<T> {
 
         target.rotation += self.v_rot * elapsed_seconds;
         target.rotation %= 360.0;
-    }
 
-    fn state(&self) -> AnimationState {
-        match self.target.borrow().base().pos.y >= self.max_y {
+        self.state = match target.pos.y >= self.max_y {
             true => AnimationState::Completed,
             false => AnimationState::Running,
         }
     }
 
-    fn into_animator(self) -> Box<dyn Animator> {
-        Box::new(self)
+    fn state(&self) -> &AnimationState {
+        &self.state
     }
 }
 
-impl<T: Drawable + 'static> TargetedAnimator<T> for SnowflakeFallAnimator<T> {
-    fn get_target(&self) -> Rc<RefCell<T>> {
-        Rc::clone(&self.target)
-    }
-}
-
-impl<T: Drawable + Default> Default for SnowflakeFallAnimator<T> {
+impl Default for SnowflakeFallAnimator {
     fn default() -> Self {
         Self {
-            base: Default::default(),
-            target: Default::default(),
             d_sin_x: Default::default(),
             v_sin_x: Default::default(),
             vy: Default::default(),
@@ -75,19 +59,10 @@ impl<T: Drawable + Default> Default for SnowflakeFallAnimator<T> {
             vx: 0.0,
             v_rot: 0.0,
             last_sin: 0.0,
+
+            total_elapsed: 0.0,
+            seed: rand::random::<f32>(),
+            state: AnimationState::Running,
         }
-    }
-}
-
-impl<T: Drawable> Deref for SnowflakeFallAnimator<T> {
-    type Target = AnimatorBase;
-
-    fn deref(&self) -> &Self::Target {
-        &self.base
-    }
-}
-impl<T: Drawable> DerefMut for SnowflakeFallAnimator<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.base
     }
 }
