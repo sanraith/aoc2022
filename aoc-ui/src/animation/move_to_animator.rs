@@ -21,9 +21,9 @@ impl<T: Drawable> Animator<T> for MoveToAnimator {
         let ratio_y = remaining_y.abs() / (remaining_x + remaining_y).abs();
 
         target.pos.x +=
-            (remaining_x.signum() * ratio_x * self.v * elapsed_s).min(remaining_x.abs());
+            (ratio_x * self.v * elapsed_s).min(remaining_x.abs()) * remaining_x.signum();
         target.pos.y +=
-            (remaining_y.signum() * ratio_y * self.v * elapsed_s).min(remaining_y.abs());
+            (ratio_y * self.v * elapsed_s).min(remaining_y.abs()) * remaining_y.signum();
 
         self.state = match distance2d_pythagoras_f32(&target.pos, &self.end_pos) <= self.end_delta {
             true => AnimationState::Completed,

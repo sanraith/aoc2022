@@ -2,6 +2,7 @@ use crate::{
     animation::{
         animator::{AnimationState, Animator},
         animator_group::AnimatorGroup,
+        ease::*,
         mouse_repellent_animator::MouseRepellentAnimator,
         move_to_animator::MoveToAnimator,
         snowflake_fall_animator::SnowflakeFallAnimator,
@@ -12,12 +13,13 @@ use crate::{
         drawing_base::{Drawable, DrawingBase},
         snowflake::Snowflake,
     },
+    util::get_mouse_tile_pos,
 };
 use bracket_terminal::prelude::{BTerm, DrawBatch, PointF};
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 use std::{cell::RefCell, rc::Rc};
 
-const SNOWFLAKE_COUNT: usize = 400;
+const SNOWFLAKE_COUNT: usize = 500;
 
 #[derive(PartialEq, Eq)]
 pub enum SnowflakeKind {
@@ -66,17 +68,23 @@ impl SnowflakeManager {
             }
 
             let group = AnimatorGroup::new(to_group);
+            let mouse_pos = get_mouse_tile_pos(&self.config.borrow());
             let move_anim = MoveToAnimator {
-                end_pos: PointF::from((0.0, 0.0)),
+                end_pos: PointF::from(mouse_pos),
                 end_delta: 0.1,
-                v: 10.0,
+                v: 20.0,
                 total_elapsed: 0.0,
                 state: AnimationState::Running,
             };
 
             random_flake.item = random_flake.item.clone();
-            let transition_anim =
-                TransitionAnimator::new(&random_flake.item, 500.0, group, move_anim);
+            let transition_anim = TransitionAnimator::new(
+                &random_flake.item,
+                2000.0,
+                EaseType::EaseInOutCubic,
+                group,
+                move_anim,
+            );
             random_flake.animators.push(Box::new(transition_anim));
             random_flake.kind = SnowflakeKind::Occupied;
             self.snowflakes.push(random_flake);

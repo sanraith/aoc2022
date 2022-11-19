@@ -1,6 +1,6 @@
 use bracket_terminal::prelude::{BTerm, DrawBatch, PointF};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DrawingBase {
     pub pos: PointF,
     pub scale: f32,

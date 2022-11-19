@@ -8,6 +8,7 @@
         "Datelike",
         "itertools",
         "Pathing",
+        "powi",
         "rngs",
         "rustup",
         "sanraith",
