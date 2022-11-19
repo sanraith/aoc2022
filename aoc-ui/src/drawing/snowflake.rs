@@ -2,7 +2,7 @@ use super::drawing_base::{Drawable, DrawingBase};
 use bracket_terminal::prelude::*;
 use std::ops::{Deref, DerefMut};
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Snowflake {
     pub base: DrawingBase,
 }

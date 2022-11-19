@@ -7,7 +7,7 @@ pub trait Animator<T: Drawable> {
     fn state(&self) -> &AnimationState;
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum AnimationState {
     Completed,
     Running,

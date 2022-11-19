@@ -2,19 +2,19 @@ use super::animator::*;
 use crate::drawing::drawing_base::Drawable;
 use bracket_terminal::prelude::BTerm;
 
-struct TransitionAnimator<T, A, B>
+pub struct TransitionAnimator<T, A, B>
 where
     T: Drawable + Clone,
     A: Animator<T>,
     B: Animator<T>,
 {
-    anim_a: A,
-    anim_b: B,
-    target_a: T,
-    target_b: T,
-    length_ms: f32,
-    elapsed: f32,
-    state: AnimationState,
+    pub anim_a: A,
+    pub anim_b: B,
+    pub target_a: T,
+    pub target_b: T,
+    pub length_ms: f32,
+    pub elapsed: f32,
+    pub state: AnimationState,
 }
 impl<T, A, B> TransitionAnimator<T, A, B>
 where
@@ -22,7 +22,7 @@ where
     A: Animator<T>,
     B: Animator<T>,
 {
-    pub fn _new(target: &T, length_ms: f32, anim_a: A, anim_b: B) -> TransitionAnimator<T, A, B> {
+    pub fn new(target: &T, length_ms: f32, anim_a: A, anim_b: B) -> TransitionAnimator<T, A, B> {
         TransitionAnimator {
             anim_a,
             anim_b,
@@ -42,14 +42,18 @@ where
     B: Animator<T>,
 {
     fn tick(&mut self, ctx: &BTerm, target: &mut T) {
+        let transition_done = self.elapsed >= self.length_ms;
         self.elapsed += ctx.frame_time_ms;
-        self.anim_a.tick(ctx, &mut self.target_a);
+
+        if !transition_done {
+            self.anim_a.tick(ctx, &mut self.target_a);
+        }
         self.anim_b.tick(ctx, &mut self.target_b);
         let a = self.target_a.base();
         let b = self.target_b.base();
 
-        let phase_a = self.elapsed.min(self.length_ms) / self.length_ms;
-        let phase_b = 1.0 - phase_a;
+        let phase_b = (self.elapsed.min(self.length_ms) / self.length_ms).min(1.0);
+        let phase_a = (1.0 - phase_b).max(0.0);
         let mut target = target.base_mut();
         target.pos.x = a.pos.x * phase_a + b.pos.x * phase_b;
         target.pos.y = a.pos.y * phase_a + b.pos.y * phase_b;
@@ -57,8 +61,8 @@ where
         target.scale = a.scale * phase_a + b.scale * phase_b;
         target.transparency = a.transparency * phase_a + b.transparency * phase_b;
 
-        self.state = match self.elapsed >= self.length_ms {
-            true => AnimationState::Completed,
+        self.state = match transition_done {
+            true => self.anim_b.state().clone(),
             false => AnimationState::Running,
         }
     }

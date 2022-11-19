@@ -3,7 +3,9 @@ use crate::{
         animator::{AnimationState, Animator},
         animator_group::AnimatorGroup,
         mouse_repellent_animator::MouseRepellentAnimator,
+        move_to_animator::MoveToAnimator,
         snowflake_fall_animator::SnowflakeFallAnimator,
+        transition_animator::TransitionAnimator,
     },
     config::Config,
     drawing::{
@@ -17,10 +19,17 @@ use std::{cell::RefCell, rc::Rc};
 
 const SNOWFLAKE_COUNT: usize = 400;
 
+#[derive(PartialEq, Eq)]
+pub enum SnowflakeKind {
+    Free,
+    Occupied,
+}
+
 pub struct AnimatedItem<T> {
     pub item: T,
     pub animators: Vec<Box<dyn Animator<T>>>,
     pub keep_after_animations: bool,
+    pub kind: SnowflakeKind,
 }
 
 pub struct SnowflakeManager {
@@ -48,16 +57,31 @@ impl SnowflakeManager {
         self.create_snowflakes();
 
         // Test animator grouping
-        let mut random_flake = self
-            .snowflakes
-            .swap_remove(rand::thread_rng().gen_range(0..self.snowflakes.len()));
-        let mut to_group = Vec::new();
-        while random_flake.animators.len() > 0 {
-            to_group.push(random_flake.animators.pop().unwrap());
+        let random_flake_index = rand::thread_rng().gen_range(0..self.snowflakes.len());
+        if self.snowflakes.get(random_flake_index).unwrap().kind == SnowflakeKind::Free {
+            let mut random_flake = self.snowflakes.swap_remove(random_flake_index);
+            let mut to_group = Vec::new();
+            while random_flake.animators.len() > 0 {
+                to_group.push(random_flake.animators.pop().unwrap());
+            }
+
+            let group = AnimatorGroup::new(to_group);
+            let move_anim = MoveToAnimator {
+                end_pos: PointF::from((0.0, 0.0)),
+                end_delta: 0.1,
+                v: 10.0,
+                total_elapsed: 0.0,
+                state: AnimationState::Running,
+            };
+
+            random_flake.item = random_flake.item.clone();
+            let transition_anim =
+                TransitionAnimator::new(&random_flake.item, 500.0, group, move_anim);
+            random_flake.animators.push(Box::new(transition_anim));
+            random_flake.kind = SnowflakeKind::Occupied;
+            self.snowflakes.push(random_flake);
         }
-        let group = Box::new(AnimatorGroup::new(to_group));
-        random_flake.animators.push(group);
-        self.snowflakes.push(random_flake);
+
         // end test animator grouping
 
         for flake in self.snowflakes.iter_mut() {
@@ -124,6 +148,7 @@ impl SnowflakeManager {
             item: flake,
             animators: vec![Box::from(fall_animator), Box::from(mouse_animator)],
             keep_after_animations: false,
+            kind: SnowflakeKind::Free,
         });
     }
 }
