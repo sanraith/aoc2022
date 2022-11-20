@@ -1,7 +1,7 @@
 use crate::{
     char_image,
     config::Config,
-    entry,
+    entry::{self, JS_CONFIG},
     manager::{flake_text_manager::FlakeCharLine, snowflake_manager::SnowflakeManager},
     util::get_mouse_tile_pos,
 };
@@ -36,14 +36,15 @@ impl GameState for UiState {
         fancy_batch.cls();
 
         // Apply config changes from javascript
-        let outside_config = entry::JS_CONFIG.lock().unwrap();
-        if outside_config.scale > 0.0 {
+        let js_config = entry::JS_CONFIG.lock().unwrap();
+        if js_config.scale > 0.0 {
             normal_batch.print(
                 Point::from_tuple((1, 5)),
-                format!("Scale: {:.3}", outside_config.scale),
+                format!("Scale: {:.3}", js_config.scale),
             );
-            (*self.config.borrow_mut()).scale = outside_config.scale as f32;
+            (*self.config.borrow_mut()).scale = js_config.scale as f32;
         }
+        drop(js_config);
 
         self.handle_mouse(&mut fancy_batch);
         self.handle_keyboard();
@@ -110,6 +111,28 @@ impl UiState {
                 _ => (),
             };
         });
+
+        // Handle keyboard events from JS
+        let js_unhandled_keys = JS_CONFIG
+            .lock()
+            .unwrap()
+            .unhandled_keys
+            .drain(..)
+            .collect::<Vec<_>>();
+        for key in js_unhandled_keys {
+            match key.as_str() {
+                "Backspace" => {
+                    self.text_manager.text.pop();
+                }
+                "Enter" => self.text_manager.text.clear(),
+                _ => {
+                    let chars = key.chars().collect::<Vec<_>>();
+                    if chars.len() == 1 {
+                        self.text_manager.add_char(chars[0])
+                    }
+                }
+            }
+        }
     }
 
     fn handle_flake_text_manager(&mut self, ctx: &mut BTerm, fancy_batch: &mut DrawBatch) {

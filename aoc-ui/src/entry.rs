@@ -7,16 +7,23 @@ use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use wasm_bindgen::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct JsConfig {
     pub scale: f64,
+    pub unhandled_keys: Vec<String>,
 }
-pub static JS_CONFIG: Lazy<Mutex<JsConfig>> = Lazy::new(|| Mutex::new(JsConfig { scale: 0.0 }));
+pub static JS_CONFIG: Lazy<Mutex<JsConfig>> = Lazy::new(|| Mutex::new(Default::default()));
 
 #[wasm_bindgen]
 pub fn set_scale(scale: JsValue) {
     let scale = scale.as_f64().unwrap();
     JS_CONFIG.lock().unwrap().scale = scale;
+}
+
+#[wasm_bindgen]
+pub fn push_key_event(key: JsValue) {
+    let key = key.as_string().unwrap();
+    JS_CONFIG.lock().unwrap().unhandled_keys.push(key);
 }
 
 #[wasm_bindgen]

@@ -40,6 +40,22 @@ function onError(err) {
         '</em><br/><br/>Check dev console for more info.<br/><br/>';
 }
 
+function handleKeypresses(rust) {
+    document.addEventListener('keypress', event => {
+        var key = event.key;
+        rust.push_key_event(key);
+        event.preventDefault();
+    }, false);
+
+    document.addEventListener('keydown', (event) => {
+        var key = event.key;
+        if (key == 'Backspace') {
+            rust.push_key_event(key);
+            event.preventDefault();
+        }
+    }, false);
+}
+
 async function start() {
     let rust;
     try {
@@ -51,6 +67,7 @@ async function start() {
 
     window.addEventListener('resize', () => resize(rust));
     resize(rust);
+    handleKeypresses(rust);
 }
 
 start();
