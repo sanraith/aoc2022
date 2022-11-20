@@ -68,7 +68,7 @@ where
         target.pos.y = a.pos.y * phase_a + b.pos.y * phase_b;
         target.rotation = a.rotation * phase_a + b.rotation * phase_b;
         target.scale = a.scale * phase_a + b.scale * phase_b;
-        target.transparency = a.transparency * phase_a + b.transparency * phase_b;
+        target.opaqueness = a.opaqueness * phase_a + b.opaqueness * phase_b;
 
         self.state = match transition_done {
             true => self.anim_b.state().clone(),

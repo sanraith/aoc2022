@@ -1,13 +1,19 @@
 use crate::{
-    config::Config, entry, manager::snowflake_manager::SnowflakeManager, util::get_mouse_tile_pos,
+    char_image,
+    config::Config,
+    entry,
+    manager::{flake_text_manager::FlakeCharLine, snowflake_manager::SnowflakeManager},
+    util::get_mouse_tile_pos,
 };
 use bracket_terminal::prelude::*;
+use rand::Rng;
 use std::{cell::RefCell, rc::Rc};
 
 pub struct UiState {
     config: Rc<RefCell<Config>>,
     total_time: f32,
     snowflake_manager: SnowflakeManager,
+    text_manager: FlakeCharLine,
 }
 impl GameState for UiState {
     fn tick(&mut self, ctx: &mut BTerm) {
@@ -39,9 +45,12 @@ impl GameState for UiState {
             (*self.config.borrow_mut()).scale = outside_config.scale as f32;
         }
 
-        self.snowflake_manager.tick(ctx, &mut fancy_batch);
-        self.handle_status(ctx, &mut normal_batch);
         self.handle_mouse(&mut fancy_batch);
+        self.handle_keyboard();
+
+        self.handle_flake_text_manager(ctx, &mut fancy_batch);
+        self.text_manager.tick(ctx, &mut fancy_batch);
+        self.handle_status(ctx, &mut normal_batch);
 
         fancy_batch.submit(2).expect("Render error");
         normal_batch.submit(1).expect("Render error");
@@ -54,6 +63,7 @@ impl UiState {
         UiState {
             config: Rc::clone(&config),
             snowflake_manager: SnowflakeManager::new(Rc::clone(&config)),
+            text_manager: FlakeCharLine::new(PointF::from((1.0, 8.0))),
             total_time: 0.0,
         }
     }
@@ -77,5 +87,49 @@ impl UiState {
             ColorPair::new(WHITE, RGBA::from_u8(0, 0, 0, 0)),
             to_cp437('.'),
         );
+    }
+
+    fn handle_keyboard(&mut self) {
+        INPUT.lock().for_each_message(|event| {
+            match event {
+                BEvent::KeyboardInput {
+                    key: VirtualKeyCode::Back,
+                    pressed: true,
+                    ..
+                } => {
+                    self.text_manager.text.pop();
+                }
+                BEvent::KeyboardInput {
+                    key: VirtualKeyCode::Return,
+                    pressed: true,
+                    ..
+                } => self.text_manager.text.clear(),
+                BEvent::Character { c } if char_image::CHARACTER_IMAGES.contains_key(&c) => {
+                    self.text_manager.add_char(c)
+                }
+                _ => (),
+            };
+        });
+    }
+
+    fn handle_flake_text_manager(&mut self, ctx: &mut BTerm, fancy_batch: &mut DrawBatch) {
+        // Add flakes if required
+        let required_flake_count = self.text_manager.required_flakes();
+        if required_flake_count > 0 {
+            let flake_man = &mut self.snowflake_manager;
+            let max_flakes_to_remove = std::usize::MAX
+                .min(flake_man.snowflakes.len())
+                .min(required_flake_count as usize);
+
+            let mut flakes = Vec::new();
+            for _ in 0..max_flakes_to_remove {
+                let random_flake_index =
+                    rand::thread_rng().gen_range(0..flake_man.snowflakes.len());
+                flakes.push(flake_man.snowflakes.swap_remove(random_flake_index));
+            }
+            self.text_manager.add_flakes(flakes);
+        }
+
+        self.snowflake_manager.tick(ctx, fancy_batch);
     }
 }

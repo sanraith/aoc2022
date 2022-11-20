@@ -8,7 +8,7 @@ pub struct Snowflake {
 }
 impl Drawable for Snowflake {
     fn draw(&self, _ctx: &BTerm, batch: &mut DrawBatch) {
-        let color: (u8, u8, u8, u8) = (200, 200, 200, (self.transparency * 255.0) as u8);
+        let color: (u8, u8, u8, u8) = (200, 200, 200, (self.opaqueness * 255.0) as u8);
 
         batch.set_fancy(
             self.pos.clone(),
