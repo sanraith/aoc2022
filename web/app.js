@@ -1,6 +1,24 @@
 import './style.css';
 
-function resize(rust) {
+function onError(err) {
+    const canvas = document.getElementById('canvas');
+    canvas.style.display = 'none';
+
+    const placeholder = document.getElementById('canvas-placeholder');
+    const header = placeholder.getElementsByClassName('title')[0];
+    header.innerHTML = 'Error';
+
+    const error = document.getElementsByClassName('error')[0];
+    error.innerHTML = 'Unhandled error in the WASM backend!<br/><em>&gt; ' + err +
+        '</em><br/><br/>Check dev console for more info.<br/><br/>';
+}
+
+/**
+ * Resizes the main canvas to fit the current window size,
+ * and notifies the rust code about the changes.
+ * @param {typeof import('./pkg')} rust
+ */
+function onResize(rust) {
     const cellSize = 16;
     const targetWidth = 90 * cellSize;
     const targetHeight = 50 * cellSize;
@@ -27,20 +45,11 @@ function resize(rust) {
     console.log(width / targetWidth);
 }
 
-function onError(err) {
-    const canvas = document.getElementById('canvas');
-    canvas.style.display = 'none';
-
-    const placeholder = document.getElementById('canvas-placeholder');
-    const header = placeholder.getElementsByClassName('title')[0];
-    header.innerHTML = 'Error';
-
-    const error = document.getElementsByClassName('error')[0];
-    error.innerHTML = 'Unhandled error in the WASM backend!<br/><em>&gt; ' + err +
-        '</em><br/><br/>Check dev console for more info.<br/><br/>';
-}
-
-function handleKeypresses(rust) {
+/**
+ * Registers handlers for key events to forward to the rust code.
+ * @param {typeof import('./pkg')} rust
+ */
+function registerKeyHandlers(rust) {
     document.addEventListener('keypress', event => {
         var key = event.key;
         rust.push_key_event(key);
@@ -56,18 +65,42 @@ function handleKeypresses(rust) {
     }, false);
 }
 
+async function initWorker() {
+    const worker = new Worker(new URL('./worker.js', import.meta.url));
+    await new Promise((resolve, reject) => {
+        worker.onmessage = ({ data }) => {
+            worker.onmessage = null;
+            if (data === 'initialized') {
+                resolve();
+            } else {
+                reject();
+            }
+        };
+    });
+
+    worker.onmessage = ({ data }) => {
+        console.log(data);
+    };
+
+    return worker;
+}
+
 async function start() {
-    let rust;
     try {
-        rust = await require('./pkg');
+        /** @type {Promise<typeof import('./pkg')>} */
+        let rustPromise = require('./pkg');
+        let rust = await rustPromise;
         rust.main_wasm();
+
+        window.addEventListener('resize', () => onResize(rust));
+        onResize(rust);
+        registerKeyHandlers(rust);
+
+        let worker = await initWorker();
+        worker.postMessage(1);
     } catch (err) {
         onError(err);
     }
-
-    window.addEventListener('resize', () => resize(rust));
-    resize(rust);
-    handleKeypresses(rust);
 }
 
 start();

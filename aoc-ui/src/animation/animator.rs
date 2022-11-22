@@ -1,6 +1,5 @@
-use bracket_terminal::prelude::BTerm;
-
 use crate::drawing::drawing_base::Drawable;
+use bracket_terminal::prelude::BTerm;
 
 pub trait Animator<T: Drawable> {
     fn tick(&mut self, ctx: &BTerm, target: &mut T);
