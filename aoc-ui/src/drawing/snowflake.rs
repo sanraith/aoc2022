@@ -12,7 +12,7 @@ impl Drawable for Snowflake {
 
         batch.set_fancy(
             self.pos.clone(),
-            0,
+            self.z_order,
             Degrees::new(self.rotation),
             PointF::new(self.scale * 0.5, self.scale * 1.0),
             ColorPair::new(color, RGBA::from_u8(0, 0, 0, 0)),

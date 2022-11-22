@@ -9,6 +9,7 @@ pub struct DrawingBase {
     /** Transparency ranging 0.0..=1.0. */
     pub opaqueness: f32,
     pub visible: bool,
+    pub z_order: i32,
 }
 impl Default for DrawingBase {
     fn default() -> Self {
@@ -18,6 +19,7 @@ impl Default for DrawingBase {
             rotation: 0.0,
             opaqueness: 1.0,
             visible: true,
+            z_order: 0,
         }
     }
 }

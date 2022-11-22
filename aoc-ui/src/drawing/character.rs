@@ -13,9 +13,9 @@ impl Drawable for Character {
                 x: self.base.pos.x,
                 y: self.base.pos.y + 1.0,
             },
-            0,
-            Degrees::new(0.0),
-            PointF::new(1.0, 1.0),
+            self.base.z_order,
+            Degrees::new(self.base.rotation),
+            PointF::new(self.base.scale, self.base.scale),
             ColorPair::new(
                 RGBA::from_u8(255, 255, 255, (self.base.opaqueness * 255.0) as u8),
                 RGBA::from_u8(0, 0, 0, 0),
