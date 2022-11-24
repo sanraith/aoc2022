@@ -98,6 +98,7 @@ version = "0.1.0"
 dependencies = [
  "futures 0.3.25",
  "num",
+ "once_cell",
  "regex",
 ]
 

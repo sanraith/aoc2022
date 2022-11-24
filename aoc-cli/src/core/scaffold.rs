@@ -1,6 +1,7 @@
 use crate::config::Config;
 use aoc::core::file_util;
 use aoc::solution::SolutionInfo;
+use aoc::solutions;
 use aoc::util::{day_str, GenericResult, MsgError};
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
@@ -50,6 +51,22 @@ impl<'a> From<&PuzzleInfo> for SolutionInfo {
     }
 }
 
+#[derive(Default)]
+pub struct ScaffoldConfig {
+    solution: bool,
+    test: bool,
+    input: bool,
+}
+impl ScaffoldConfig {
+    fn all() -> ScaffoldConfig {
+        ScaffoldConfig {
+            input: true,
+            solution: true,
+            test: true,
+        }
+    }
+}
+
 trait JoinText {
     fn join(self, sep: &str) -> String;
 }
@@ -59,7 +76,27 @@ impl JoinText for scraper::element_ref::Text<'_> {
     }
 }
 
+pub fn scaffold_missing_inputs(config: &Config) {
+    let solutions = solutions::create_map();
+    println!("Scaffolding inputs for {} days...", solutions.len());
+    for k in solutions.keys() {
+        scaffold_day_internal(
+            config,
+            k.year,
+            k.day,
+            ScaffoldConfig {
+                input: true,
+                ..Default::default()
+            },
+        )
+    }
+}
+
 pub fn scaffold_day(config: &Config, year: i32, day: u32) {
+    scaffold_day_internal(config, year, day, ScaffoldConfig::all());
+}
+
+fn scaffold_day_internal(config: &Config, year: i32, day: u32, scaffold_config: ScaffoldConfig) {
     let session_key = match &config.session_key {
         Some(key) => key.to_owned(),
         None => {
@@ -86,23 +123,43 @@ pub fn scaffold_day(config: &Config, year: i32, day: u32) {
 
     let solution_dir = get_dir(SOLUTION_DIR);
     let test_dir = get_dir(TEST_DIR);
-    let fs = generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, &solution_dir).unwrap();
-    let ft = generate_file(&puzzle_info, TEST_TEMPLATE_PATH, &test_dir).unwrap();
-    let fi = generate_file(
-        &puzzle_info,
-        INPUT_TEMPLATE_PATH,
-        PathBuf::from(file_util::input_file_path(&(&puzzle_info).into()))
-            .parent()
-            .unwrap()
-            .to_str()
-            .unwrap(),
-    )
-    .unwrap();
 
+    let fs = match scaffold_config.solution {
+        true => Some(generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, &solution_dir).unwrap()),
+        false => None,
+    };
+    let ft = match scaffold_config.test {
+        true => Some(generate_file(&puzzle_info, TEST_TEMPLATE_PATH, &test_dir).unwrap()),
+        false => None,
+    };
+    let fi = match scaffold_config.input {
+        true => Some(
+            generate_file(
+                &puzzle_info,
+                INPUT_TEMPLATE_PATH,
+                PathBuf::from(file_util::input_file_path(&(&puzzle_info).into()))
+                    .parent()
+                    .unwrap()
+                    .to_str()
+                    .unwrap(),
+            )
+            .unwrap(),
+        ),
+        false => None,
+    };
+
+    let files_to_open = [fi, ft, fs]
+        .into_iter()
+        .filter_map(|x| x)
+        .collect::<Vec<_>>();
     if let Some(editor_name) = &config.editor_after_scaffold {
+        let args = ["/C", &editor_name]
+            .into_iter()
+            .map(|x| x.to_owned())
+            .chain(files_to_open.into_iter());
         println!("Opening scaffolded files in {}...", editor_name);
         Command::new("cmd")
-            .args(["/C", &editor_name, &fi, &ft, &fs])
+            .args(args)
             .output()
             .expect("open scaffolded files in editor");
     }

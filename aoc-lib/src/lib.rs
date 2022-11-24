@@ -6,6 +6,7 @@ pub mod core {
     pub mod solution_runner;
     pub mod util;
 }
+pub mod inputs;
 pub mod solutions;
 
 #[cfg(test)]

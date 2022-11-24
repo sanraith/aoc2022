@@ -1,5 +1,7 @@
-
 # --- RUST ---
+# Collection inputs
+/aoc-lib/input
+
 # Local cache for aoc-cli
 /.cache
 

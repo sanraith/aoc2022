@@ -1,7 +1,7 @@
 use crate::solution::SolutionInfo;
 use std::path::PathBuf;
 
-pub const INPUT_PATH: &'static str = "input";
+const INPUT_PATH: &'static str = "aoc-lib/input";
 
 pub fn year_directory_name(year: i32) -> String {
     format!("year{}", year)

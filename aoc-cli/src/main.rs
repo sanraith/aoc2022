@@ -22,7 +22,7 @@ fn main() {
 
     let args = Args::parse();
     match args.mode {
-        Some(Command::Scaffold { year, days }) => scaffold(&config, year, days),
+        Some(Command::Scaffold { year, days, inputs }) => scaffold(&config, year, days, inputs),
         Some(Command::Solve { days }) => {
             let days_str = days
                 .iter()
@@ -41,16 +41,20 @@ fn main() {
     }
 }
 
-fn scaffold(config: &Config, year: Option<i32>, days: Vec<u32>) {
-    let year = match year {
-        Some(year) => year,
-        None => timing::latest_aoc_date().year,
-    };
+fn scaffold(config: &Config, year: Option<i32>, days: Vec<u32>, inputs: bool) {
+    if inputs {
+        scaffold::scaffold_missing_inputs(config);
+    } else {
+        let year = match year {
+            Some(year) => year,
+            None => timing::latest_aoc_date().year,
+        };
 
-    match days.len() {
-        1.. => days
-            .into_iter()
-            .for_each(|day| scaffold::scaffold_day(config, year, day)),
-        _ => scaffold::scaffold_day(config, year, timing::latest_aoc_date().day),
-    };
+        match days.len() {
+            1.. => days
+                .into_iter()
+                .for_each(|day| scaffold::scaffold_day(config, year, day)),
+            _ => scaffold::scaffold_day(config, year, timing::latest_aoc_date().day),
+        };
+    }
 }

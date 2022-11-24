@@ -1,9 +1,8 @@
-use aoc::{core::file_util, helpers::*, solution::*, solutions, util::*};
+use aoc::{helpers::*, inputs, solution::*, solutions, util::*};
 use arboard::Clipboard;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
-    fs,
     io::{self, Write},
 };
 
@@ -41,7 +40,11 @@ pub fn run_solution(config: &Config, year: i32, day: u32) -> GenericResult {
 }
 
 fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericResult {
-    let raw_input = fs::read_to_string(file_util::input_file_path(&day_type.info))?;
+    let SolutionInfo { year, day, .. } = day_type.info;
+    let year_day = YearDay::new(year, day);
+    let raw_input = inputs::get(&year_day)
+        .ok_or(MsgError("input should be available"))?
+        .to_owned();
     let ctx = Context {
         raw_input,
         on_progress: |p| {
