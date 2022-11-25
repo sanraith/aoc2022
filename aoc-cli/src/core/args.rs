@@ -9,7 +9,7 @@ pub struct Args {
 
 #[derive(Subcommand)]
 pub enum Command {
-    /// Scaffold solution and test files
+    /// Scaffold solution, test and input files
     Scaffold {
         /// Download inputs for existing solutions. If this is specified, other arguments are ignored.
         #[arg(short, long)]

@@ -3,7 +3,7 @@ use std::{
     fmt::{self, Display},
 };
 
-#[derive(Eq, PartialEq, Hash, Default)]
+#[derive(Eq, PartialEq, Hash, Default, Ord, PartialOrd)]
 pub struct YearDay {
     pub year: i32,
     pub day: u32,

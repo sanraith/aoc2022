@@ -2,7 +2,8 @@ use crate::config::Config;
 use aoc::core::file_util;
 use aoc::solution::SolutionInfo;
 use aoc::solutions;
-use aoc::util::{day_str, GenericResult, MsgError};
+use aoc::util::{day_str, GenericResult, MsgError, YearDay};
+use itertools::Itertools;
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
 use std::borrow::Cow;
@@ -56,6 +57,8 @@ pub struct ScaffoldConfig {
     solution: bool,
     test: bool,
     input: bool,
+    open: bool,
+    build: bool,
 }
 impl ScaffoldConfig {
     fn all() -> ScaffoldConfig {
@@ -63,6 +66,8 @@ impl ScaffoldConfig {
             input: true,
             solution: true,
             test: true,
+            build: true,
+            open: true,
         }
     }
 }
@@ -76,11 +81,11 @@ impl JoinText for scraper::element_ref::Text<'_> {
     }
 }
 
-pub fn scaffold_missing_inputs(config: &Config) {
+pub fn scaffold_inputs(config: &Config) {
     let solutions = solutions::create_map();
     println!("Scaffolding inputs for {} days...", solutions.len());
-    for k in solutions.keys() {
-        scaffold_day_internal(
+    for k in solutions.keys().sorted() {
+        match scaffold_day_internal(
             config,
             k.year,
             k.day,
@@ -88,20 +93,34 @@ pub fn scaffold_missing_inputs(config: &Config) {
                 input: true,
                 ..Default::default()
             },
-        )
+        ) {
+            Err(_) => break,
+            Ok(_) => (),
+        }
     }
 }
 
-pub fn scaffold_day(config: &Config, year: i32, day: u32) {
-    scaffold_day_internal(config, year, day, ScaffoldConfig::all());
+pub fn scaffold_days(config: &Config, days: Vec<YearDay>) -> GenericResult {
+    for (index, date) in days.iter().enumerate() {
+        let mut scaffold_config = ScaffoldConfig::all();
+        scaffold_config.build = index == days.len() - 1; // only build on the last day
+        scaffold_day_internal(config, date.year, date.day, scaffold_config)?;
+    }
+
+    Ok(())
 }
 
-fn scaffold_day_internal(config: &Config, year: i32, day: u32, scaffold_config: ScaffoldConfig) {
+fn scaffold_day_internal(
+    config: &Config,
+    year: i32,
+    day: u32,
+    scaffold_config: ScaffoldConfig,
+) -> GenericResult {
     let session_key = match &config.session_key {
         Some(key) => key.to_owned(),
         None => {
             println!("Please provide your session key in aoc_config.ini!");
-            return;
+            return Err(MsgError("no session key found").into());
         }
     };
 
@@ -133,18 +152,25 @@ fn scaffold_day_internal(config: &Config, year: i32, day: u32, scaffold_config: 
         false => None,
     };
     let fi = match scaffold_config.input {
-        true => Some(
-            generate_file(
-                &puzzle_info,
-                INPUT_TEMPLATE_PATH,
-                PathBuf::from(file_util::input_file_path(&(&puzzle_info).into()))
-                    .parent()
-                    .unwrap()
-                    .to_str()
+        true => {
+            if puzzle_info.puzzle_input.len() == 0 {
+                println!("Could not scaffold input, check session key in aoc_config.ini!");
+                return Err(MsgError("empty input").into());
+            } else {
+                Some(
+                    generate_file(
+                        &puzzle_info,
+                        INPUT_TEMPLATE_PATH,
+                        PathBuf::from(file_util::input_file_path(&(&puzzle_info).into()))
+                            .parent()
+                            .unwrap()
+                            .to_str()
+                            .unwrap(),
+                    )
                     .unwrap(),
-            )
-            .unwrap(),
-        ),
+                )
+            }
+        }
         false => None,
     };
 
@@ -153,24 +179,29 @@ fn scaffold_day_internal(config: &Config, year: i32, day: u32, scaffold_config: 
         .filter_map(|x| x)
         .collect::<Vec<_>>();
     if let Some(editor_name) = &config.editor_after_scaffold {
-        let args = ["/C", &editor_name]
-            .into_iter()
-            .map(|x| x.to_owned())
-            .chain(files_to_open.into_iter());
-        println!("Opening scaffolded files in {}...", editor_name);
-        Command::new("cmd")
-            .args(args)
-            .output()
-            .expect("open scaffolded files in editor");
+        if scaffold_config.open {
+            let args = ["/C", &editor_name]
+                .into_iter()
+                .map(|x| x.to_owned())
+                .chain(files_to_open.into_iter());
+            println!("Opening scaffolded files in {}...", editor_name);
+            Command::new("cmd")
+                .args(args)
+                .output()
+                .expect("open scaffolded files in editor");
+        }
     }
 
-    println!("Re-building to generate indexes...");
-    Command::new("cargo")
-        .args(["build", "-p", "aoc-lib"])
-        .output()
-        .expect("builds without errors");
+    if scaffold_config.build {
+        println!("Re-building to generate indexes...");
+        Command::new("cargo")
+            .args(["build", "-p", "aoc-lib"])
+            .output()
+            .expect("builds without errors");
+    }
 
     println!("Ok.");
+    Ok(())
 }
 
 fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
@@ -244,8 +275,13 @@ fn request_cached(sub_url: &str, session_key: &str) -> GenericResult<String> {
     println!("Requesting: {}", &url);
     let contents = ureq::get(&url.to_string())
         .set("cookie", &format!("session={session_key};"))
-        .call()?
-        .into_string()?;
+        .call()
+        .map_err(|e| MsgError(e.to_string()))
+        .and_then(|x| x.into_string().map_err(|e| MsgError(e.to_string())))
+        .map_err(|e| {
+            println!("Error during request: {}", e.to_string());
+            e
+        })?;
 
     println!(
         "Storing response in cache: {}",

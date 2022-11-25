@@ -39,6 +39,14 @@ pub fn run_solution(config: &Config, year: i32, day: u32) -> GenericResult {
     run_solution_internal(config, day_type)
 }
 
+struct HandleProgress;
+impl ProgressHandler for HandleProgress {
+    fn on_progress(&mut self, value: f32) {
+        print!("\r{:.2}%  ", value * 100.0);
+        io::stdout().flush().unwrap();
+    }
+}
+
 fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericResult {
     let SolutionInfo { year, day, .. } = day_type.info;
     let year_day = YearDay::new(year, day);
@@ -47,10 +55,7 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
         .to_owned();
     let ctx = Context {
         raw_input,
-        on_progress: |p| {
-            print!("\r{:.2}%  ", p * 100.0);
-            io::stdout().flush().unwrap();
-        },
+        progress_handler: Box::new(HandleProgress),
     };
     let print_and_copy = |part: u32, result: &SolutionResult| -> () {
         println!(

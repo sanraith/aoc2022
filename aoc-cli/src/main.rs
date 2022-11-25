@@ -3,11 +3,8 @@ use aoc_cli::{args::*, config::*, scaffold, solve, timing};
 use aoc_ui;
 use clap::Parser;
 use clearscreen;
+use itertools::Itertools;
 fn main() {
-    _ = clearscreen::clear();
-    aoc_ui::char_image::print_line("AOC 2022", '#', ' ');
-    println!("--- Advent of Code 2022 CLI by sanraith ---");
-
     let config = Config::load_from_file(DEFAULT_CONFIG_PATH)
         .or_else(|_| {
             println!(
@@ -19,8 +16,12 @@ fn main() {
             Ok::<_, DynError>(config)
         })
         .expect("config loaded or generated");
-
     let args = Args::parse();
+
+    _ = clearscreen::clear();
+    aoc_ui::char_image::print_line("AOC 2022", '#', ' ');
+    println!("--- Advent of Code 2022 CLI by sanraith ---");
+
     match args.mode {
         Some(Command::Scaffold { year, days, inputs }) => scaffold(&config, year, days, inputs),
         Some(Command::Solve { days }) => {
@@ -43,7 +44,7 @@ fn main() {
 
 fn scaffold(config: &Config, year: Option<i32>, days: Vec<u32>, inputs: bool) {
     if inputs {
-        scaffold::scaffold_missing_inputs(config);
+        scaffold::scaffold_inputs(config);
     } else {
         let year = match year {
             Some(year) => year,
@@ -51,10 +52,20 @@ fn scaffold(config: &Config, year: Option<i32>, days: Vec<u32>, inputs: bool) {
         };
 
         match days.len() {
-            1.. => days
-                .into_iter()
-                .for_each(|day| scaffold::scaffold_day(config, year, day)),
-            _ => scaffold::scaffold_day(config, year, timing::latest_aoc_date().day),
+            1.. => {
+                _ = scaffold::scaffold_days(
+                    config,
+                    days.into_iter()
+                        .map(|day| YearDay::new(year, day))
+                        .collect_vec(),
+                )
+            }
+            _ => {
+                _ = scaffold::scaffold_days(
+                    config,
+                    vec![YearDay::new(year, timing::latest_aoc_date().day)],
+                )
+            }
         };
     }
 }

@@ -37,15 +37,21 @@ impl SolutionInfo {
     }
 }
 
+pub trait ProgressHandler {
+    fn on_progress(&mut self, _value: f32) {}
+}
+pub struct NopOnProgress;
+impl ProgressHandler for NopOnProgress {}
+
 pub struct Context {
     pub raw_input: String,
-    pub on_progress: fn(f32) -> (),
+    pub progress_handler: Box<dyn ProgressHandler>,
 }
 impl Default for Context {
     fn default() -> Self {
         Self {
             raw_input: Default::default(),
-            on_progress: |_| (),
+            progress_handler: Box::new(NopOnProgress),
         }
     }
 }
@@ -75,9 +81,9 @@ impl Context {
 
     /// Updates the current progress percentage.
     /// value range: 0..1
-    pub fn progress(&self, value: f32) -> Result<(), String> {
+    pub fn progress(&mut self, value: f32) -> Result<(), String> {
         match value {
-            v if v >= 0.0 && v <= 1.0 => Ok((self.on_progress)(v)),
+            v if v >= 0.0 && v <= 1.0 => Ok(self.progress_handler.on_progress(v)),
             _ => Err(format!("Invalid progress value: {}", value)),
         }
     }
