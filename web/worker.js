@@ -1,17 +1,15 @@
-import * as rust from './pkg';
+import * as rustWorker from './pkg';
 
 async function init() {
+    rustWorker.worker_set_global_scope(self);
+
     self.onmessage = ({ data }) => {
-        let result;
         try {
             console.log("worker message: " + data);
-            result = rust.worker_inc(data);
+            rustWorker.worker_on_message(data);
         } catch (err) {
             console.error(err);
-            result = 'error';
         }
-        console.log("worker result: " + result);
-        self.postMessage(result);
     };
     self.postMessage('initialized');
 }

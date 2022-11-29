@@ -1,9 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::{
     error::Error,
     fmt::{self, Display},
 };
 
-#[derive(Eq, PartialEq, Hash, Default, Ord, PartialOrd)]
+#[derive(Eq, PartialEq, Hash, Default, Ord, PartialOrd, Serialize, Deserialize, Copy, Clone)]
 pub struct YearDay {
     pub year: i32,
     pub day: u32,

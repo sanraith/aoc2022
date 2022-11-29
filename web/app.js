@@ -89,15 +89,16 @@ async function start() {
     try {
         /** @type {Promise<typeof import('./pkg')>} */
         let rustPromise = require('./pkg');
-        let rust = await rustPromise;
-        rust.main_wasm();
+        let rustMain = await rustPromise;
+        rustMain.main_wasm();
 
-        window.addEventListener('resize', () => onResize(rust));
-        onResize(rust);
-        registerKeyHandlers(rust);
+        window.addEventListener('resize', () => onResize(rustMain));
+        onResize(rustMain);
+        registerKeyHandlers(rustMain);
 
         let worker = await initWorker();
-        worker.postMessage(1);
+        rustMain.set_worker(worker);
+        worker.onmessage = ({ data }) => rustMain.on_worker_message(data);
     } catch (err) {
         onError(err);
     }

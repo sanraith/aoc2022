@@ -1,7 +1,7 @@
 use crate::{
     char_image,
     config::Config,
-    entry::{self, JS_CONFIG},
+    js_interop::{self, JS_BRIDGE},
     manager::{flake_text_manager::FlakeCharLine, snowflake_manager::SnowflakeManager},
     util::get_mouse_tile_pos,
 };
@@ -36,15 +36,15 @@ impl GameState for UiState {
         fancy_batch.cls();
 
         // Apply config changes from javascript
-        let js_config = entry::JS_CONFIG.lock().unwrap();
-        if js_config.scale > 0.0 {
+        let js_bridge = js_interop::JS_BRIDGE.lock().unwrap();
+        if js_bridge.scale > 0.0 {
             normal_batch.print(
                 Point::from_tuple((1, 5)),
-                format!("Scale: {:.3}", js_config.scale),
+                format!("Scale: {:.3}", js_bridge.scale),
             );
-            (*self.config.borrow_mut()).scale = js_config.scale as f32;
+            (*self.config.borrow_mut()).scale = js_bridge.scale as f32;
         }
-        drop(js_config);
+        drop(js_bridge);
 
         self.handle_mouse(&mut fancy_batch);
         self.handle_keyboard();
@@ -113,7 +113,7 @@ impl UiState {
         });
 
         // Handle keyboard events from JS
-        let js_unhandled_keys = JS_CONFIG
+        let js_unhandled_keys = JS_BRIDGE
             .lock()
             .unwrap()
             .unhandled_keys
