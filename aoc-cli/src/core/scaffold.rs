@@ -20,7 +20,7 @@ const SOLUTION_DIR: &'static str = "aoc-lib/src/solutions/";
 const SOLUTION_TEMPLATE_PATH: &'static str =
     "aoc-lib/templates/solution/day__DAY_STR__.rs.template";
 
-const TEST_DIR: &'static str = "aoc-lib/src/tests/solutions/";
+const TEST_DIR: &'static str = "aoc-lib/src/tests/";
 const TEST_TEMPLATE_PATH: &'static str = "aoc-lib/templates/test/day__DAY_STR___test.rs.template";
 const INPUT_TEMPLATE_PATH: &'static str = "aoc-lib/templates/input/day__DAY_STR__.txt.template";
 
