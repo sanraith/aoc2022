@@ -10,7 +10,7 @@ use wasm_bindgen::JsValue;
 
 pub struct WasmRunner {}
 impl SolutionRunner for WasmRunner {
-    fn run(day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>> {
+    fn run(&self, day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>> {
         let (tx, rx) = mpsc::unbounded::<SolveProgress>();
         let mut js_bridge = js_interop::JS_BRIDGE.lock().unwrap();
         if let Some(tx) = &mut js_bridge.worker_tx {

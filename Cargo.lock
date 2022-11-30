@@ -84,6 +84,7 @@ dependencies = [
  "chrono",
  "clap",
  "clearscreen",
+ "futures 0.3.25",
  "itertools",
  "regex",
  "rust-ini",

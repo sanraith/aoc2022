@@ -1,10 +1,12 @@
 use crate::config::Config;
-use aoc::{helpers::*, inputs, solution::*, solutions, util::*};
+use aoc::{core::solution_runner::*, helpers::*, solution::*, solutions, util::*};
 use arboard::Clipboard;
+use futures::executor;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
     io::{self, Write},
+    time::Duration,
 };
 
 pub fn run_solutions(config: &Config) -> GenericResult {
@@ -49,36 +51,47 @@ impl ProgressHandler for HandleProgress {
 fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericResult {
     let SolutionInfo { year, day, .. } = day_type.info;
     let year_day = YearDay::new(year, day);
-    let raw_input = inputs::get(&year_day)
-        .ok_or(MsgError("input should be available"))?
-        .to_owned();
-    let ctx = Context {
-        raw_input,
-        progress_handler: Box::new(HandleProgress),
-    };
-    let print_and_copy = |part: u32, result: &SolutionResult| -> () {
+    let print_and_copy = |part: u32, result: &SolveProgress, duration: &Duration| -> () {
+        let result_text = match result {
+            SolveProgress::SuccessResult(r) => r.value.clone(),
+            SolveProgress::ErrorResult(r) => format!("Error - {}", &r.value),
+            _ => panic!("Not supported result!"),
+        };
+
         println!(
-            "Part {}: {}",
+            "Part {} ({} ms): {}",
             part,
-            result
-                .as_ref()
-                .map(|x| x.to_owned())
-                .unwrap_or_else(|x| format!("Error - {}", x))
+            duration.as_millis(),
+            &result_text
         );
         if config.copy_result_to_clipboard {
-            if let Ok(result) = &result {
+            if let SolveProgress::SuccessResult(_) = &result {
                 let mut clipboard = Clipboard::new().expect("access system clipboard");
-                clipboard.set_text(result).expect("write system clipboard");
+                clipboard
+                    .set_text(result_text)
+                    .expect("write system clipboard");
             }
         }
     };
     println!("\nDay {} - {}", day_type.info.day, day_type.info.title);
-    let mut day = day_type.create_new();
-    _ = day
-        .init(&ctx)
-        .and_then(|_| day.part1(&ctx))
-        .tap(|result| print_and_copy(1, result))
-        .and_then(|_| day.part2(&ctx))
-        .tap(|result| print_and_copy(2, result));
+
+    let solver = ThreadSolutionRunner {};
+    let stream = solver.run(year_day, Input::Default);
+    let pin_stream = Box::into_pin(stream);
+    let mut blocking_stream = executor::block_on_stream(pin_stream);
+    while let Some(progress) = blocking_stream.next() {
+        match &progress {
+            SolveProgress::SuccessResult(p) => {
+                print_and_copy(p.part.unwrap() as u32, &progress, &p.duration)
+            }
+            SolveProgress::ErrorResult(p) => {
+                print_and_copy(p.part.unwrap() as u32, &progress, &p.duration)
+            }
+            SolveProgress::Done(p) => println!("Total: {} ms", &p.duration.as_millis()),
+            SolveProgress::Error(p) => println!("Error: {}", p),
+            SolveProgress::Progress(_) => (),
+        }
+    }
+
     Ok(())
 }

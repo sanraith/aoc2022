@@ -1,11 +1,11 @@
 use crate::solution::{Context, ProgressHandler, Solution};
 use crate::util::{GenericResult, YearDay};
 use crate::{inputs, solutions};
-use futures::channel::mpsc::{self, UnboundedSender};
-use futures::{executor, stream, SinkExt, Stream, StreamExt};
+use futures::{executor, stream, Stream};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::mpsc::{self, Sender};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
@@ -14,26 +14,24 @@ pub trait Tx<T> {
     fn close(&mut self);
 }
 struct UnboundedTxWrapper {
-    tx: UnboundedSender<SolveProgress>,
+    tx: Sender<SolveProgress>,
 }
 impl Tx<SolveProgress> for UnboundedTxWrapper {
     fn send(&mut self, msg: SolveProgress) {
-        executor::block_on(self.tx.send(msg)).unwrap(); // TODO check
+        self.tx.send(msg).unwrap();
     }
 
-    fn close(&mut self) {
-        self.tx.close_channel();
-    }
+    fn close(&mut self) {}
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ResultPack<T> {
     pub part: Option<u8>,
     pub value: T,
     pub duration: Duration,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum SolveProgress {
     Error(String),
     Progress(ResultPack<f32>),
@@ -49,21 +47,21 @@ pub enum Input {
 }
 
 pub trait SolutionRunner {
-    fn run(day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>>;
+    fn run(&self, day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>>;
 }
 pub struct ThreadSolutionRunner {}
 impl SolutionRunner for ThreadSolutionRunner {
-    fn run(day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>> {
-        let (tx, rx) = mpsc::unbounded::<SolveProgress>();
+    fn run(&self, day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>> {
+        let (tx, rx) = mpsc::channel::<SolveProgress>();
         thread::spawn(move || {
             executor::block_on(run_solution(day, input, UnboundedTxWrapper { tx }))
         });
 
-        let progress_stream = stream::unfold(rx, |mut rx| async move {
-            let item = rx.next().await;
+        let progress_stream = stream::unfold(rx, |rx| async move {
+            let item = rx.recv();
             match item {
-                Some(item) => Some((item, rx)),
-                None => None,
+                Ok(item) => Some((item, rx)),
+                _ => None,
             }
         });
 

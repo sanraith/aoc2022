@@ -10,6 +10,7 @@ arboard = { version = "3.1.1", features = [] }
 chrono = "0.4.22"
 clap = { version = "4.0.11", features = ["derive"] }
 clearscreen = "1.0.10"
+futures = "0.3.25"
 itertools = "0.10.5"
 regex = "1.6.0"
 rust-ini = "0.18.0"
