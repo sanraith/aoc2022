@@ -32,10 +32,16 @@ fn main() {
                 .collect_vec();
 
             if days.len() == 0 {
-                if let Some(yd) = solutions::create_map().keys().sorted().rev().next() {
-                    days.push(yd.clone());
-                } else {
-                    println!("Error: no solution found!");
+                days.append(
+                    &mut solutions::create_map()
+                        .keys()
+                        .filter(|x| x.year == year)
+                        .sorted()
+                        .map(|x| x.clone())
+                        .collect_vec(),
+                );
+                if days.len() == 0 {
+                    println!("Error: no solution found for {}!", year);
                     return;
                 }
             }

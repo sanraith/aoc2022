@@ -11,12 +11,12 @@ const RE_EXPORTS_PLACEHOLDER: &'static str = "__RE_EXPORTS__";
 const INPUT_BYTE_DEFINITIONS_PLACEHOLDER: &'static str = "__INPUT_BYTE_DEFINITIONS__";
 const INPUT_LIST_PLACEHOLDER: &'static str = "__INPUT_LIST__";
 
-const INPUT_DIRECTORY: &'static str = "input";
+const INPUT_DIRECTORY: &'static str = "input/";
 const INPUT_MODULE_TEMPLATE_PATH: &'static str = "templates/inputs.rs.template";
 const INPUT_MODULE_PATH: &'static str = "src/inputs.rs";
 const SOLUTION_DIRECTORY: &'static str = "src/solutions/";
 const SOLUTION_MODULE_TEMPLATE_PATH: &'static str = "templates/solution/mod.rs.template";
-const TEST_DIRECTORY: &'static str = "src/tests";
+const TEST_DIRECTORY: &'static str = "src/tests/";
 const TEST_MODULE_TEMPLATE_PATH: &'static str = "templates/test/mod.rs.template";
 const RELATIVE_MODULE_FILE_NAME: &'static str = "../__MODULE_NAME__.rs";
 
