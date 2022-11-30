@@ -1,3 +1,4 @@
+use crate::config::Config;
 use aoc::{helpers::*, inputs, solution::*, solutions, util::*};
 use arboard::Clipboard;
 use itertools::Itertools;
@@ -5,8 +6,6 @@ use std::{
     collections::HashMap,
     io::{self, Write},
 };
-
-use crate::config::Config;
 
 pub fn run_solutions(config: &Config) -> GenericResult {
     let solutions = solutions::create_map();

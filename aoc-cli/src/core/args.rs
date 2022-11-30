@@ -22,7 +22,12 @@ pub enum Command {
     },
     /// Solve puzzles
     Solve {
+        /// Specifies the target year. Defaults to the latest available AOC year.
+        #[arg(short, long)]
+        year: Option<i32>,
         /// List of days to solve. Defaults to [all implemented days].
         days: Vec<u32>,
     },
+    // Display the pretty UI with snowing effects
+    Ui,
 }

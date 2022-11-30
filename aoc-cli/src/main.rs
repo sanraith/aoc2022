@@ -1,4 +1,4 @@
-use aoc::util::*;
+use aoc::{solutions, util::*};
 use aoc_cli::{args::*, config::*, scaffold, solve, timing};
 use aoc_ui;
 use clap::Parser;
@@ -24,22 +24,45 @@ fn main() {
 
     match args.mode {
         Some(Command::Scaffold { year, days, inputs }) => scaffold(&config, year, days, inputs),
-        Some(Command::Solve { days }) => {
-            let days_str = days
-                .iter()
-                .map(|x| x.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-            println!("Solving days: {}", days_str);
-            days.iter()
-                .for_each(|d| solve::run_solution(&config, 2021, *d).unwrap())
+        Some(Command::Solve { year, days }) => {
+            let year = year.unwrap_or(timing::latest_aoc_date().year);
+            let mut days = days
+                .into_iter()
+                .map(|day| YearDay::new(year, day))
+                .collect_vec();
+
+            if days.len() == 0 {
+                if let Some(yd) = solutions::create_map().keys().sorted().rev().next() {
+                    days.push(yd.clone());
+                } else {
+                    println!("Error: no solution found!");
+                    return;
+                }
+            }
+
+            solve_days(config, year, days);
         }
+        Some(Command::Ui) => _ = aoc_ui::entry::main(),
         None => {
-            _ = aoc_ui::entry::main();
-            // println!("Solving all days of all years...");
-            // solve::run_solutions(&config).unwrap();
+            if let Some(yd) = solutions::create_map().keys().sorted().rev().next() {
+                solve_days(config, yd.year, vec![yd.clone()]);
+            } else {
+                println!("Error: no solution found!");
+                return;
+            }
         }
     }
+}
+
+fn solve_days(config: Config, year: i32, days: Vec<YearDay>) {
+    let days_str = days
+        .iter()
+        .map(|x| x.day.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    println!("Solving days for {}: {}", year, days_str);
+    days.iter()
+        .for_each(|yd| solve::run_solution(&config, yd.year, yd.day).unwrap())
 }
 
 fn scaffold(config: &Config, year: Option<i32>, days: Vec<u32>, inputs: bool) {

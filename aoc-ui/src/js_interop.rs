@@ -1,4 +1,4 @@
-use crate::{entry::main, wasm_runner::WorkerPostMessageTx};
+use crate::{entry, wasm_runner::WorkerPostMessageTx};
 use aoc::{
     core::solution_runner::{self, Input, SolveProgress},
     helpers::AsSome,
@@ -7,11 +7,7 @@ use aoc::{
 use futures::{channel::mpsc::UnboundedSender, executor, SinkExt};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::{
-    borrow::{Borrow, BorrowMut},
-    ops::Deref,
-    sync::Mutex,
-};
+use std::{ops::Deref, sync::Mutex};
 use wasm_bindgen::prelude::*;
 use web_sys::{DedicatedWorkerGlobalScope, Worker};
 
@@ -52,7 +48,7 @@ pub static JS_BRIDGE: Lazy<Mutex<JsBridge>> = Lazy::new(|| Mutex::new(Default::d
 
 #[wasm_bindgen]
 pub fn worker_set_global_scope(worker_scope: JsValue) {
-    JS_BRIDGE.lock().unwrap().borrow_mut().worker_scope_wrapper = Some(WorkerScopeWrapper(
+    JS_BRIDGE.lock().unwrap().worker_scope_wrapper = Some(WorkerScopeWrapper(
         DedicatedWorkerGlobalScope::from(worker_scope),
     ));
 }
@@ -68,7 +64,6 @@ pub fn worker_on_message(message: JsValue) {
             JS_BRIDGE
                 .lock()
                 .unwrap()
-                .borrow()
                 .worker_scope_wrapper
                 .as_some()
                 .post_message(&JsValue::from(temp_feedback))
@@ -84,8 +79,7 @@ pub fn worker_on_message(message: JsValue) {
 
 #[wasm_bindgen]
 pub fn set_worker(worker: JsValue) {
-    JS_BRIDGE.lock().unwrap().borrow_mut().worker_wrapper =
-        Some(WorkerWrapper(Worker::from(worker)));
+    JS_BRIDGE.lock().unwrap().worker_wrapper = Some(WorkerWrapper(Worker::from(worker)));
 
     let test_command = serde_json::to_string(&WorkerCommand::StartDay(
         YearDay::new(2022, 1),
@@ -96,7 +90,6 @@ pub fn set_worker(worker: JsValue) {
     JS_BRIDGE
         .lock()
         .unwrap()
-        .borrow()
         .worker_wrapper
         .as_some()
         .post_message(&JsValue::from(test_command))
@@ -124,7 +117,7 @@ pub fn push_key_event(key: JsValue) {
 #[wasm_bindgen]
 pub fn main_wasm() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
-    main().map_err(|x| JsValue::from(format!("{:?}", x)))?;
+    entry::main().map_err(|x| JsValue::from(format!("{:?}", x)))?;
 
     Ok(())
 }
