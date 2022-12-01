@@ -41,4 +41,5 @@ The repo includes a Javascript + WASM based web runner to run solutions in the b
 
 ## Attributions
 
+- Advent of Code: <https://adventofcode.com>
 - Favicon: <https://iconarchive.com/show/simple-christmas-icons-by-gpritiranjan/christmas-tree-icon.html>

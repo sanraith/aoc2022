@@ -12,7 +12,7 @@ impl Solution for Day01 {
         let max = ctx
             .input()
             .split("\n\n")
-            .map(|x| x.lines().filter_map(|x| x.parse::<i32>().ok()).sum::<i32>())
+            .map(|p| p.lines().filter_map(|x| x.parse::<i32>().ok()).sum::<i32>())
             .max()
             .unwrap_or(0);
 
@@ -23,7 +23,7 @@ impl Solution for Day01 {
         let max = ctx
             .input()
             .split("\n\n")
-            .map(|c| c.lines().filter_map(|x| x.parse::<i32>().ok()).sum::<i32>())
+            .map(|p| p.lines().filter_map(|x| x.parse::<i32>().ok()).sum::<i32>())
             .sorted_by(|a, b| b.cmp(a))
             .take(3)
             .sum::<i32>();

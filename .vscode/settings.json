@@ -16,5 +16,15 @@
         "signum",
         "Triggerable",
         "ureq"
-    ]
+    ],
+    "files.exclude": {
+        "**/mod.rs": true, // Hide auto-generated modules in explorer
+        // --- Defaults ---
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+    }
 }
