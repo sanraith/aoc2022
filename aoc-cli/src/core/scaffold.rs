@@ -83,14 +83,16 @@ impl JoinText for scraper::element_ref::Text<'_> {
 
 pub fn scaffold_inputs(config: &Config) {
     let solutions = solutions::create_map();
+    let days = solutions.keys().sorted().collect_vec();
     println!("Scaffolding inputs for {} days...", solutions.len());
-    for k in solutions.keys().sorted() {
+    for (index, k) in days.iter().enumerate() {
         match scaffold_day_internal(
             config,
             k.year,
             k.day,
             ScaffoldConfig {
                 input: true,
+                build: index == days.len() - 1,
                 ..Default::default()
             },
         ) {
