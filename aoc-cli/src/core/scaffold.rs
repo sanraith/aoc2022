@@ -273,7 +273,12 @@ fn request_cached(sub_url: &str, session_key: &str) -> GenericResult<String> {
     }
 
     println!("Requesting: {}", &url);
-    let contents = ureq::get(&url.to_string())
+    // Specify user agent as requested here: https://www.reddit.com/r/adventofcode/comments/z9dhtd/please_include_your_contact_info_in_the_useragent/
+    let agent = ureq::AgentBuilder::new()
+        .user_agent("https://github.com/sanraith/aoc2022 by sanraith@users.noreply.github.com")
+        .build();
+    let contents = agent
+        .get(&url.to_string())
         .set("cookie", &format!("session={session_key};"))
         .call()
         .map_err(|e| MsgError(e.to_string()))
