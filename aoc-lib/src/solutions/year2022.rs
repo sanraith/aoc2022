@@ -6,20 +6,18 @@ use crate::util::YearDay;
 use std::collections::HashMap;
 
 // Module definitions
-pub mod year2021;
-pub mod year2022;
+pub mod day01;
 
 // Re-exports
-
+pub use day01::Day01;
 
 // List of solutions
 #[allow(unused_mut)]
 pub fn create_list() -> Vec<SolutionType> {
     let mut list = vec![
-
+        Day01::as_type(),
     ];
-    list.append(&mut year2021::create_list());
-    list.append(&mut year2022::create_list());
+
     list
 }
 

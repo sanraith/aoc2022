@@ -1,7 +1,7 @@
 # aoc2022
 
 Solutions for Advent of Code 2022 in Rust with a complementary web runner.  
-Check out the web runner at: <https://sanraith.github.io/aoc2022/>  
+Web runner will be available at (WIP): <https://sanraith.github.io/aoc2022/>  
 All scaffold related downloads are cached locally.
 
 ## Development environment setup
