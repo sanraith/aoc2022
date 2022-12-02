@@ -7,6 +7,7 @@ use std::{str, collections::HashMap};
 static INPUT_YEAR_2021_DAY_01: &'static [u8] = include_bytes!("../input/year2021/day01.txt");
 static INPUT_YEAR_2021_DAY_12: &'static [u8] = include_bytes!("../input/year2021/day12.txt");
 static INPUT_YEAR_2022_DAY_01: &'static [u8] = include_bytes!("../input/year2022/day01.txt");
+static INPUT_YEAR_2022_DAY_02: &'static [u8] = include_bytes!("../input/year2022/day02.txt");
 
 pub static INPUT_MAP: Lazy<HashMap<YearDay, String>> = Lazy::new(create_input_map);
 
@@ -21,6 +22,7 @@ fn create_input_map() -> HashMap<YearDay, String> {
     map.insert(YearDay::new(2021, 1), from_utf8(INPUT_YEAR_2021_DAY_01));
     map.insert(YearDay::new(2021, 12), from_utf8(INPUT_YEAR_2021_DAY_12));
     map.insert(YearDay::new(2022, 1), from_utf8(INPUT_YEAR_2022_DAY_01));
+    map.insert(YearDay::new(2022, 2), from_utf8(INPUT_YEAR_2022_DAY_02));
 
     map
 }

@@ -3,6 +3,7 @@
         "Animatable",
         "arboard",
         "bindgen",
+        "CHARCODE",
         "chrono",
         "clearscreen",
         "Datelike",

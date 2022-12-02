@@ -99,7 +99,7 @@ fn collect_files_rec(directory: PathBuf) -> GenericResult<Vec<String>> {
 
 fn generate_source_module(solution_dir: &str) -> GenericResult<()> {
     let solution_module_re = Regex::new(r"^(day\S+).rs$")?;
-    let struct_name_re = Regex::new(r"^[^/]*pub struct (Day[a-zA-Z0-9_]+)")?;
+    let struct_name_re = Regex::new(r"\n[^/]*pub struct (Day[a-zA-Z0-9_]+)")?;
 
     let mut module_lines: Vec<String> = Vec::new();
     let mut export_lines: Vec<String> = Vec::new();
