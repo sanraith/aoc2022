@@ -1,4 +1,4 @@
-use crate::util::{day_str, GenericResult};
+use crate::util::GenericResult;
 use regex::Regex;
 use std::{error::Error, fmt, str::FromStr};
 
@@ -27,13 +27,6 @@ impl SolutionInfo {
             day,
             title: title.to_owned(),
         }
-    }
-
-    /// Day as string with 0..1 preceding zeros.
-    /// -  5 => "05"
-    /// - 12 => "12"
-    pub fn day_str(&self) -> String {
-        day_str(self.day)
     }
 }
 
