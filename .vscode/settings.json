@@ -1,4 +1,7 @@
 {
+    "cSpell.ignorePaths": [
+        "aoc-lib/src/tests/year*/*_test.rs"
+    ],
     "cSpell.words": [
         "Animatable",
         "arboard",
