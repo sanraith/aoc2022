@@ -9,6 +9,7 @@ static INPUT_YEAR_2021_DAY_12: &'static [u8] = include_bytes!("../input/year2021
 static INPUT_YEAR_2022_DAY_01: &'static [u8] = include_bytes!("../input/year2022/day01.txt");
 static INPUT_YEAR_2022_DAY_02: &'static [u8] = include_bytes!("../input/year2022/day02.txt");
 static INPUT_YEAR_2022_DAY_03: &'static [u8] = include_bytes!("../input/year2022/day03.txt");
+static INPUT_YEAR_2022_DAY_04: &'static [u8] = include_bytes!("../input/year2022/day04.txt");
 
 pub static INPUT_MAP: Lazy<HashMap<YearDay, String>> = Lazy::new(create_input_map);
 
@@ -25,6 +26,7 @@ fn create_input_map() -> HashMap<YearDay, String> {
     map.insert(YearDay::new(2022, 1), from_utf8(INPUT_YEAR_2022_DAY_01));
     map.insert(YearDay::new(2022, 2), from_utf8(INPUT_YEAR_2022_DAY_02));
     map.insert(YearDay::new(2022, 3), from_utf8(INPUT_YEAR_2022_DAY_03));
+    map.insert(YearDay::new(2022, 4), from_utf8(INPUT_YEAR_2022_DAY_04));
 
     map
 }
