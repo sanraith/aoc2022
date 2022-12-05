@@ -30,9 +30,9 @@ impl Solution for Day04 {
 fn parse_lines(ctx: &Context) -> Vec<(i32, i32, i32, i32)> {
     ctx.input()
         .lines()
-        .filter_map(|l| {
-            l.split(",")
-                .flat_map(|p| p.split("-").filter_map(|x| x.parse::<i32>().ok()))
+        .filter_map(|line| {
+            line.split([',', '-'])
+                .filter_map(|x| x.parse::<i32>().ok())
                 .collect_tuple()
         })
         .collect_vec()

@@ -66,10 +66,14 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
         );
         if config.copy_result_to_clipboard {
             if let SolveProgress::SuccessResult(_) = &result {
-                let mut clipboard = Clipboard::new().expect("access system clipboard");
-                clipboard
-                    .set_text(result_text)
-                    .expect("write system clipboard");
+                match Clipboard::new() {
+                    Ok(mut clipboard) => {
+                        if let Err(err) = clipboard.set_text(result_text) {
+                            println!("Warning: could not copy output to clipboard! {}", err);
+                        }
+                    }
+                    Err(err) => println!("Warning: could access clipboard! {}", err),
+                }
             }
         }
     };

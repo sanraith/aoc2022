@@ -39,7 +39,7 @@ impl Solution for Day05 {
 
 fn parse_input(ctx: &Context) -> (Vec<Vec<char>>, Vec<(usize, usize, usize)>) {
     let input = ctx.input();
-    let (stack_def, move_def) = input.split("\n\n").collect_tuple().unwrap();
+    let (stack_def, move_def) = input.split_once("\n\n").unwrap();
 
     let stack_char_width: usize = 4;
     let stack_lines = stack_def.lines().rev().collect_vec();

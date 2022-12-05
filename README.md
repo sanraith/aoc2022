@@ -23,6 +23,11 @@ Run the selected solutions and optionally copy the result to the clipboard. See 
 - `cargo run -- ui`: Display a pretty UI to solve all days in the current year.
 - `cargo run -- --help`: Display the available options.
 
+## Testing
+
+- `cargo test -p aoc-lib year2022`: Run tests for year 2022.
+- `cargo test -p aoc-lib year2022::day04`: Run tests for year 2022 day 4.
+
 ## Scaffolding
 
 Automatically download input and prepare test and solution files for the given day.
