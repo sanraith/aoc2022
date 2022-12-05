@@ -2,7 +2,6 @@ use aoc::{solutions, util::*};
 use aoc_cli::{args::*, config::*, scaffold, solve, timing};
 use aoc_ui;
 use clap::Parser;
-use clearscreen;
 use itertools::Itertools;
 fn main() {
     let config = Config::load_from_file(DEFAULT_CONFIG_PATH)
@@ -18,7 +17,6 @@ fn main() {
         .expect("config loaded or generated");
     let args = Args::parse();
 
-    _ = clearscreen::clear();
     aoc_ui::char_image::print_line("AOC 2022", '#', ' ');
     println!("--- Advent of Code 2022 CLI by sanraith ---");
 
