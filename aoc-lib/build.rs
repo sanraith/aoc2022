@@ -7,12 +7,7 @@ const MODULE_DEFINITIONS_PLACEHOLDER: &'static str = "__MODULE_DEFINITIONS__";
 const SOLUTION_TYPE_LIST_PLACEHOLDER: &'static str = "__SOLUTION_TYPE_LIST__";
 const SOLUTION_TYPE_LIST_APPEND_PLACEHOLDER: &'static str = "__SOLUTION_TYPE_LIST_APPEND__";
 const RE_EXPORTS_PLACEHOLDER: &'static str = "__RE_EXPORTS__";
-const INPUT_BYTE_DEFINITIONS_PLACEHOLDER: &'static str = "__INPUT_BYTE_DEFINITIONS__";
-const INPUT_LIST_PLACEHOLDER: &'static str = "__INPUT_LIST__";
 
-const INPUT_DIRECTORY: &'static str = "input/";
-const INPUT_MODULE_TEMPLATE_PATH: &'static str = "templates/inputs.rs.template";
-const INPUT_MODULE_PATH: &'static str = "src/inputs.rs";
 const SOLUTION_DIRECTORY: &'static str = "src/solutions/";
 const SOLUTION_MODULE_TEMPLATE_PATH: &'static str = "templates/solution/mod.rs.template";
 const TEST_DIRECTORY: &'static str = "src/tests/";
@@ -21,80 +16,14 @@ const TEST_MODULE_TEMPLATE_PATH: &'static str = "templates/test/mod.rs.template"
 fn main() {
     println!("cargo:rerun-if-changed={}", SOLUTION_DIRECTORY);
     println!("cargo:rerun-if-changed={}", TEST_DIRECTORY);
-    println!("cargo:rerun-if-changed={}", INPUT_DIRECTORY);
     if let Err(e) = generate_modules() {
         eprintln!("Error: {}", e);
     }
 }
 
-#[derive(Debug)]
-struct Input {
-    year: i32,
-    day: u32,
-    day_str:String,
-}
-
 fn generate_modules() -> GenericResult<()> {
     generate_source_module(SOLUTION_DIRECTORY)?;
-    generate_test_module(TEST_DIRECTORY)?;
-    generate_input_module()
-}
-
-fn generate_input_module() -> GenericResult<()> {
-    let year_day_re = Regex::new(r"year(\d+).day(\d+).txt$")?;
-    let input_files = collect_files_rec(PathBuf::from(INPUT_DIRECTORY))?;
-    let inputs = input_files
-        .into_iter()
-        .filter_map(|f| {
-            year_day_re.captures(&f).and_then(|c| {
-                Some(Input {
-                    year: c.get(1).unwrap().as_str().parse::<i32>().unwrap(),
-                    day: c.get(2).unwrap().as_str().parse::<u32>().unwrap(),
-                    day_str: c.get(2).unwrap().as_str().to_owned()
-                })
-            })
-        })
-        .collect::<Vec<_>>();
-
-    println!("{:?}", inputs);
-
-    let input_definition_lines = inputs.iter().map(|x| 
-        format!("static INPUT_YEAR_{}_DAY_{}: &'static [u8] = include_bytes!(\"../input/year{}/day{}.txt\");", x.year, x.day_str, x.year, x.day_str)
-    ).collect::<Vec<_>>();
-
-    let input_list_lines = inputs.iter().map(|x| 
-        format!("map.insert(YearDay::new({}, {}), from_utf8(INPUT_YEAR_{}_DAY_{}));", x.year, x.day, x.year, x.day_str)
-    ).collect::<Vec<_>>();
-
-    let mut output = fs::read_to_string(INPUT_MODULE_TEMPLATE_PATH)?;
-    replace_placeholder(
-        &mut output,
-        INPUT_BYTE_DEFINITIONS_PLACEHOLDER,
-        &input_definition_lines.join("\n"),
-    );
-    replace_placeholder(
-        &mut output,
-        INPUT_LIST_PLACEHOLDER,
-        &input_list_lines.join("\n"),
-    );
-
-    let path = PathBuf::from(INPUT_MODULE_PATH);
-    save_file(path, output)?;
-
-    Ok(())
-}
-
-fn collect_files_rec(directory: PathBuf) -> GenericResult<Vec<String>> {
-    let mut files = Vec::new();
-    for entry in fs::read_dir(directory)? {
-        let entry = entry?;
-        if entry.path().is_dir() {
-            files.append(&mut collect_files_rec(entry.path())?);
-        }
-        files.push(entry.path().to_str().unwrap().to_owned());
-    }
-
-    Ok(files)
+    generate_test_module(TEST_DIRECTORY)
 }
 
 fn generate_source_module(solution_dir: &str) -> GenericResult<()> {
@@ -232,7 +161,9 @@ fn collect_modules_from_dir(
         }
 
         let file_name = entry.file_name().into_string().unwrap();
-        if file_name == "mod.rs" { continue; }
+        if file_name == "mod.rs" {
+            continue;
+        }
 
         let mod_name = match solution_module_re
             .captures(&file_name)
