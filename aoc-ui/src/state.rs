@@ -4,7 +4,9 @@ use crate::{
     js_interop::{self, JS_BRIDGE},
     manager::{flake_text_manager::FlakeCharLine, snowflake_manager::SnowflakeManager},
     util::get_mouse_tile_pos,
+    wasm_runner::WasmRunner,
 };
+use aoc::{core::solution_runner::SolutionRunner, solutions};
 use bracket_terminal::prelude::*;
 use rand::Rng;
 use std::{cell::RefCell, rc::Rc};
@@ -22,6 +24,13 @@ impl GameState for UiState {
         // Exit on Esc key
         if let Some(key) = ctx.key {
             match key {
+                VirtualKeyCode::Return => {
+                    let wasm_runner = WasmRunner {};
+                    wasm_runner.run(
+                        solutions::create_list().last().unwrap().info.year_day(),
+                        aoc::core::solution_runner::Input::Default,
+                    );
+                }
                 VirtualKeyCode::Escape => ctx.quit(),
                 _ => (),
             }

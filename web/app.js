@@ -98,7 +98,10 @@ async function start() {
 
         let worker = await initWorker();
         rustMain.set_worker(worker);
-        worker.onmessage = ({ data }) => rustMain.on_worker_message(data);
+        worker.onmessage = ({ data }) => {
+            console.log("main received: ", data);
+            rustMain.on_worker_message(data);
+        };
     } catch (err) {
         onError(err);
     }

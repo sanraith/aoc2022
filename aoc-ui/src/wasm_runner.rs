@@ -1,30 +1,22 @@
-use crate::js_interop::{self, WorkerCommand, JS_BRIDGE};
+use crate::js_interop::{self, WorkerCommand};
 use aoc::{
-    core::solution_runner::{Input, SolutionRunner, SolveProgress, Tx},
+    core::solution_runner::{Input, LocalSyncStream, SolutionRunner, SyncStream},
     helpers::AsSome,
     util::YearDay,
 };
-use futures::{channel::mpsc, executor, SinkExt};
-use futures::{stream, Stream, StreamExt};
+use std::sync::{Arc, Mutex};
 use wasm_bindgen::JsValue;
 
 pub struct WasmRunner {}
-impl SolutionRunner for WasmRunner {
-    fn run(&self, day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>> {
-        let (tx, rx) = mpsc::unbounded::<SolveProgress>();
+impl SolutionRunner<LocalSyncStream> for WasmRunner {
+    fn run(&self, day: YearDay, input: Input) -> Arc<Mutex<LocalSyncStream>> {
+        let stream = Arc::new(Mutex::new(LocalSyncStream::new()));
         let mut js_bridge = js_interop::JS_BRIDGE.lock().unwrap();
-        if let Some(tx) = &mut js_bridge.worker_tx {
-            executor::block_on(tx.close()).unwrap();
-        };
-        js_bridge.worker_tx = Some(tx);
 
-        let progress_stream = stream::unfold(rx, |mut rx| async move {
-            let item = rx.next().await;
-            match item {
-                Some(item) => Some((item, rx)),
-                None => None,
-            }
-        });
+        if let Some(stream) = &mut js_bridge.worker_tx {
+            stream.lock().unwrap().close();
+        };
+        js_bridge.worker_tx = Some(Arc::clone(&stream));
 
         // Send solve day command to js worker
         js_bridge
@@ -35,23 +27,6 @@ impl SolutionRunner for WasmRunner {
             ))
             .unwrap();
 
-        Box::new(progress_stream)
-    }
-}
-
-pub struct WorkerPostMessageTx {}
-impl Tx<SolveProgress> for WorkerPostMessageTx {
-    fn send(&mut self, msg: SolveProgress) {
-        JS_BRIDGE
-            .lock()
-            .unwrap()
-            .worker_scope_wrapper
-            .as_some()
-            .post_message(&JsValue::from_str(&serde_json::to_string(&msg).unwrap()))
-            .unwrap();
-    }
-
-    fn close(&mut self) {
-        // Do nothing, do not need to close channel between main and web worker
+        stream
     }
 }

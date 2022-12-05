@@ -1,7 +1,7 @@
 # aoc2022
 
 Solutions for Advent of Code 2022 in Rust with a complementary web runner.  
-Web runner will be available at (WIP): <https://sanraith.github.io/aoc2022/>  
+Web runner (WIP) will be available at: <https://sanraith.github.io/aoc2022/>  
 All scaffold related requests are cached locally.
 
 ## Development environment setup
@@ -20,7 +20,7 @@ Run the selected solutions and optionally copy the result to the clipboard. See 
 
 - `cargo run`: Solve the last available day.
 - `cargo run -- solve`: Solve all days in the current year.
-- `cargo run -- ui`: Display a pretty UI to solve all days in the current year.
+- `cargo run -- ui`: Display a pretty UI to solve all days in the current year. (WIP)
 - `cargo run -- --help`: Display the available options.
 
 ## Testing

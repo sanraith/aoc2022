@@ -1,28 +1,13 @@
 use crate::solution::{Context, ProgressHandler, Solution};
 use crate::util::{GenericResult, YearDay};
 use crate::{inputs, solutions};
-use futures::{executor, stream, Stream};
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::mpsc::{self, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::{Duration, SystemTime};
-
-pub trait Tx<T> {
-    fn send(&mut self, msg: T);
-    fn close(&mut self);
-}
-struct UnboundedTxWrapper {
-    tx: Sender<SolveProgress>,
-}
-impl Tx<SolveProgress> for UnboundedTxWrapper {
-    fn send(&mut self, msg: SolveProgress) {
-        self.tx.send(msg).unwrap();
-    }
-
-    fn close(&mut self) {}
-}
+use std::time::Duration;
+use wasm_timer::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResultPack<T> {
@@ -46,31 +31,57 @@ pub enum Input {
     Custom(String),
 }
 
-pub trait SolutionRunner {
-    fn run(&self, day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>>;
+pub trait SyncStream {
+    fn send(&mut self, item: SolveProgress);
+    fn close(&mut self);
+    fn next_items(&mut self) -> Option<Vec<SolveProgress>>;
 }
-pub struct ThreadSolutionRunner {}
-impl SolutionRunner for ThreadSolutionRunner {
-    fn run(&self, day: YearDay, input: Input) -> Box<dyn Stream<Item = SolveProgress>> {
-        let (tx, rx) = mpsc::channel::<SolveProgress>();
-        thread::spawn(move || {
-            executor::block_on(run_solution(day, input, UnboundedTxWrapper { tx }))
-        });
 
-        let progress_stream = stream::unfold(rx, |rx| async move {
-            let item = rx.recv();
-            match item {
-                Ok(item) => Some((item, rx)),
-                _ => None,
-            }
-        });
+pub struct LocalSyncStream {
+    items: Vec<SolveProgress>,
+    active: bool,
+}
+impl LocalSyncStream {
+    pub fn new() -> LocalSyncStream {
+        LocalSyncStream {
+            items: Default::default(),
+            active: true,
+        }
+    }
+}
+impl SyncStream for LocalSyncStream {
+    fn send(&mut self, item: SolveProgress) {
+        self.items.push(item);
+    }
 
-        Box::new(progress_stream)
+    fn close(&mut self) {
+        self.active = false;
+    }
+
+    /// Returns the next items, or None if the stream is closed.
+    fn next_items(&mut self) -> Option<Vec<SolveProgress>> {
+        match self.items.len() > 0 || self.active {
+            true => Some(self.items.drain(..).collect_vec()),
+            false => None,
+        }
     }
 }
 
-pub async fn run_solution<T: Tx<SolveProgress> + 'static>(day: YearDay, input: Input, tx: T) {
-    let tx = Rc::new(RefCell::new(tx));
+pub trait SolutionRunner<T: SyncStream> {
+    fn run(&self, day: YearDay, input: Input) -> Arc<Mutex<T>>;
+}
+pub struct ThreadSolutionRunner {}
+impl SolutionRunner<LocalSyncStream> for ThreadSolutionRunner {
+    fn run(&self, day: YearDay, input: Input) -> Arc<Mutex<LocalSyncStream>> {
+        let stream = Arc::new(Mutex::new(LocalSyncStream::new()));
+        let stream_copy = Arc::clone(&stream);
+        thread::spawn(move || run_solution(day, input, stream_copy));
+
+        stream
+    }
+}
+
+pub fn run_solution<T: SyncStream + 'static>(day: YearDay, input: Input, tx: Arc<Mutex<T>>) {
     let start = SystemTime::now();
     let raw_input = match input {
         Input::Default => match inputs::get(&day) {
@@ -87,7 +98,10 @@ pub async fn run_solution<T: Tx<SolveProgress> + 'static>(day: YearDay, input: I
     };
     let ctx = Context {
         raw_input,
-        progress_handler: Box::new(SendOnProgress::new_with_fps(20.0, Rc::clone(&tx))),
+        progress_handler: RefCell::new(Box::new(SendOnProgress::new_with_fps(
+            20.0,
+            Arc::clone(&tx),
+        ))),
     };
     let mut solution = match solutions::create_map().get(&day) {
         Some(solutions) => solutions[0].create_new(),
@@ -107,27 +121,23 @@ pub async fn run_solution<T: Tx<SolveProgress> + 'static>(day: YearDay, input: I
             SolveProgress::Error(format!("Unable to init solution: {}", err).to_owned()),
         );
     }
-    if let Err(_) = solve_part(&mut solution, 1, start, &ctx, &tx).await {
+    if let Err(_) = solve_part(&mut solution, 1, start, &ctx, &tx) {
         return;
     }
-    if let Err(_) = solve_part(&mut solution, 2, start, &ctx, &tx).await {
+    if let Err(_) = solve_part(&mut solution, 2, start, &ctx, &tx) {
         return;
     }
 
-    close(&tx, start).await;
+    close(&tx, start);
 }
 
-fn send_and_close<T: Tx<SolveProgress>>(
-    tx: &Rc<RefCell<T>>,
-    start: SystemTime,
-    msg: SolveProgress,
-) {
-    tx.borrow_mut().send(msg); // TODO consider feed instead
-    executor::block_on(close(tx, start));
+fn send_and_close<T: SyncStream>(tx: &Arc<Mutex<T>>, start: SystemTime, msg: SolveProgress) {
+    tx.lock().unwrap().send(msg);
+    close(tx, start);
 }
 
-async fn close<T: Tx<SolveProgress>>(tx: &Rc<RefCell<T>>, start: SystemTime) {
-    let mut tx = tx.borrow_mut();
+fn close<T: SyncStream>(tx: &Arc<Mutex<T>>, start: SystemTime) {
+    let mut tx = tx.lock().unwrap();
     tx.send(SolveProgress::Done(ResultPack {
         part: None,
         value: (),
@@ -136,12 +146,12 @@ async fn close<T: Tx<SolveProgress>>(tx: &Rc<RefCell<T>>, start: SystemTime) {
     tx.close();
 }
 
-async fn solve_part<T: Tx<SolveProgress>>(
+fn solve_part<T: SyncStream>(
     solution: &mut Box<dyn Solution>,
     part: u8,
     global_start: SystemTime,
     ctx: &Context,
-    tx: &Rc<RefCell<T>>,
+    tx: &Arc<Mutex<T>>,
 ) -> GenericResult<String> {
     let start = SystemTime::now();
     let result = match part {
@@ -153,7 +163,8 @@ async fn solve_part<T: Tx<SolveProgress>>(
     let duration = SystemTime::now().duration_since(start).unwrap_or_default();
     match &result {
         Ok(result) => tx
-            .borrow_mut()
+            .lock()
+            .unwrap()
             .send(SolveProgress::SuccessResult(ResultPack {
                 part: Some(part),
                 value: result.to_owned(),
@@ -175,14 +186,14 @@ async fn solve_part<T: Tx<SolveProgress>>(
     result
 }
 
-pub struct SendOnProgress<T: Tx<SolveProgress>> {
-    tx: Rc<RefCell<T>>,
+pub struct SendOnProgress<T: SyncStream> {
+    tx: Arc<Mutex<T>>,
     min_duration_between_updates: Duration,
     start: SystemTime,
     last_update: SystemTime,
 }
-impl<T: Tx<SolveProgress>> SendOnProgress<T> {
-    pub fn new(tx: Rc<RefCell<T>>) -> SendOnProgress<T> {
+impl<T: SyncStream> SendOnProgress<T> {
+    pub fn new(tx: Arc<Mutex<T>>) -> SendOnProgress<T> {
         SendOnProgress {
             tx,
             min_duration_between_updates: Duration::from_millis(0),
@@ -191,21 +202,21 @@ impl<T: Tx<SolveProgress>> SendOnProgress<T> {
         }
     }
 
-    pub fn new_with_fps(fps: f32, tx: Rc<RefCell<T>>) -> SendOnProgress<T> {
+    pub fn new_with_fps(fps: f32, tx: Arc<Mutex<T>>) -> SendOnProgress<T> {
         let mut sop = SendOnProgress::new(tx);
-        sop.min_duration_between_updates = Duration::from_millis((1000.0 / fps.min(0.001)) as u64);
+        sop.min_duration_between_updates = Duration::from_millis((1000.0 / fps.max(0.001)) as u64);
         return sop;
     }
 }
-impl<T: Tx<SolveProgress>> ProgressHandler for SendOnProgress<T> {
+impl<T: SyncStream> ProgressHandler for SendOnProgress<T> {
     fn on_progress(&mut self, value: f32) {
         let elapsed_since_last_update = SystemTime::now()
             .duration_since(self.last_update)
             .unwrap_or_default();
         if elapsed_since_last_update >= self.min_duration_between_updates {
-            // TODO check whether block_on works here correctly
             self.tx
-                .borrow_mut()
+                .lock()
+                .unwrap()
                 .send(SolveProgress::Progress(ResultPack {
                     part: None,
                     value,
