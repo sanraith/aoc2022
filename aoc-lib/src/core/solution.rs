@@ -81,11 +81,9 @@ impl Context {
 
     /// Updates the current progress percentage.
     /// value range: 0..1
-    pub fn progress(&self, value: f32) -> Result<(), String> {
-        match value {
-            v if v >= 0.0 && v <= 1.0 => Ok(self.progress_handler.borrow_mut().on_progress(v)),
-            _ => Err(format!("Invalid progress value: {}", value)),
-        }
+    pub fn progress(&self, value: f32) {
+        let value = value.min(1.0).max(0.0);
+        self.progress_handler.borrow_mut().on_progress(value);
     }
 }
 

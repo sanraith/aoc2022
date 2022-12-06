@@ -6,7 +6,7 @@ use std::{
     collections::HashMap,
     io::{self, Write},
     thread,
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 
 pub fn run_solutions(config: &Config) -> GenericResult {
@@ -56,9 +56,9 @@ fn print_and_copy(part: u32, result: &SolveProgress, duration: &Duration, config
     };
 
     println!(
-        "Part {} ({} ms): {}",
+        "Part {} ({}): {}",
         part,
-        duration.as_millis(),
+        fmt_duration(duration),
         &result_text
     );
     if config.copy_result_to_clipboard {
@@ -85,11 +85,27 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
 
     let config = config.clone();
     let t = thread::spawn(move || {
-        while let Some(items) = stream.lock().unwrap().next_items() {
-            if items.len() == 0 {
-                thread::sleep(Duration::from_millis(20));
-                continue;
-            }
+        let mut _dbg_loop_count = 0;
+        let mut _dbg_lock_duration = Duration::default();
+        let mut _dbg_sleep_duration = Duration::default();
+
+        loop {
+            _dbg_loop_count += 1;
+            let before_lock = SystemTime::now();
+            // If we lock in 'while let' or 'match' instead, we would lock while sleeping
+            let next_items = stream.lock().unwrap().next_items();
+            _dbg_lock_duration += before_lock.elapsed().unwrap_or_default();
+
+            let items = match next_items {
+                Some(items) if items.len() > 0 => items,
+                Some(_) => {
+                    let before_sleep = SystemTime::now();
+                    thread::sleep(Duration::from_millis(10));
+                    _dbg_sleep_duration += before_sleep.elapsed().unwrap_or_default();
+                    continue;
+                }
+                None => break,
+            };
 
             for progress in items {
                 match &progress {
@@ -99,13 +115,21 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
                     SolveProgress::ErrorResult(p) => {
                         print_and_copy(p.part.unwrap() as u32, &progress, &p.duration, &config)
                     }
-                    // SolveProgress::Done(p) => println!("Total: {} ms", &p.duration.as_millis()),
-                    SolveProgress::Done(_) => (),
+                    SolveProgress::Done(p) => println!("Total: {}", fmt_duration(&p.duration)),
                     SolveProgress::Error(p) => println!("Error: {}", p),
-                    SolveProgress::Progress(p) => println!("Progress: {:.2}%", p.value * 100.0),
+                    SolveProgress::Progress(p) => println!(
+                        "Progress ({}): {:.2}%",
+                        fmt_duration(&p.duration),
+                        p.value * 100.0
+                    ),
                 }
             }
         }
+
+        // println!(
+        //     "loops: {}, lock: {:?}, sleep: {:?}",
+        //     _dbg_loop_count, _dbg_lock_duration, _dbg_sleep_duration
+        // );
     });
     t.join().unwrap();
 

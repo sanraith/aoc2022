@@ -114,6 +114,7 @@ pub fn run_solution<T: SyncStream + 'static>(day: YearDay, input: Input, tx: Arc
         }
     };
 
+    let start = SystemTime::now();
     if let Err(err) = solution.init(&ctx) {
         return send_and_close(
             &tx,

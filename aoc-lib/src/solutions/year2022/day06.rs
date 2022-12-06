@@ -27,9 +27,8 @@ fn find_marker(ctx: &Context, msg_size: usize) -> usize {
         .collect_vec()
         .windows(msg_size)
         .enumerate()
-        .filter(|(_, w)| HashSet::<&char>::from_iter(w.iter()).len() == msg_size)
-        .next()
+        .find(|(_, w)| HashSet::<&char>::from_iter(w.iter()).len() == msg_size)
         .unwrap();
 
-    return index + msg_size;
+    index + msg_size
 }
