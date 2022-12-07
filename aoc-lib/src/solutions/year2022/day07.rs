@@ -1,7 +1,6 @@
-use crate::solution::*;
+use crate::{solution::*, util::GenericResult};
 use itertools::Itertools;
 use std::{
-    borrow::BorrowMut,
     cell::RefCell,
     collections::HashMap,
     rc::{Rc, Weak},
@@ -15,7 +14,7 @@ impl Solution for Day07 {
     }
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
-        let (_, directories) = parse_input(ctx);
+        let (_, directories) = parse_input(ctx)?;
         let sum_of_small_directories = directories
             .iter()
             .map(|dir| calc_size(&dir))
@@ -26,7 +25,7 @@ impl Solution for Day07 {
     }
 
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
-        let (root, directories) = parse_input(ctx);
+        let (root, directories) = parse_input(ctx)?;
         let disk_size = 70000000;
         let total_required_space = 30000000;
         let current_space = disk_size - calc_size(&root);
@@ -37,7 +36,7 @@ impl Solution for Day07 {
             .map(|dir| calc_size(&dir))
             .sorted()
             .find(|&size| size >= required_space)
-            .unwrap();
+            .ok_or("no directory is large enough")?;
 
         Ok(size_of_dir_to_delete.to_string())
     }
@@ -53,7 +52,7 @@ fn calc_size(dir: &Rc<Directory>) -> u64 {
             .sum::<u64>()
 }
 
-fn parse_input(ctx: &Context) -> (Rc<Directory>, Vec<Rc<Directory>>) {
+fn parse_input(ctx: &Context) -> GenericResult<(Rc<Directory>, Vec<Rc<Directory>>)> {
     let root = Rc::new(Directory {
         _name: "/".to_owned(),
         ..Default::default()
@@ -62,50 +61,44 @@ fn parse_input(ctx: &Context) -> (Rc<Directory>, Vec<Rc<Directory>>) {
     let mut current = Rc::clone(&root);
 
     for line in ctx.input().lines() {
-        let cmd = line.split(" ").collect_vec();
-        match cmd[0] {
-            "$" if line == "$ cd /" => current = Rc::clone(&root),
-            "$" if line == "$ cd .." => {
-                let parent = current.parent.upgrade().unwrap();
+        let parts = line.split(" ").collect_vec();
+        match parts[..] {
+            ["$", "cd", "/"] => current = Rc::clone(&root),
+            ["$", "cd", ".."] => {
+                let parent = current.parent.upgrade().ok_or("missing parent")?;
                 current = Rc::clone(&parent);
             }
-            "$" if cmd[1] == "cd" => {
+            ["$", "cd", name] => {
                 let children = current.directories.borrow();
-                let child = Rc::clone(&children.get(cmd[2]).unwrap());
+                let child = Rc::clone(children.get(name).ok_or("missing children")?);
                 drop(children);
                 current = child;
             }
-            "$" if cmd[1] == "ls" => (),
-            "dir" => {
-                let name = cmd[1];
+            ["$", "ls"] => (),
+            ["dir", name] => {
                 let dir = Rc::new(Directory {
                     _name: name.to_owned(),
                     parent: Rc::downgrade(&current),
                     ..Default::default()
                 });
                 current
-                    .borrow_mut()
                     .directories
                     .borrow_mut()
                     .insert(name.to_owned(), Rc::clone(&dir));
                 directories.push(Rc::clone(&dir));
             }
-            _ => {
-                let name = cmd[1];
+            [size_str, name] => {
                 let file = File {
                     _name: name.to_owned(),
-                    size: cmd[0].parse().unwrap(),
+                    size: size_str.parse().map_err(|_| "invalid file size")?,
                 };
-                current
-                    .borrow_mut()
-                    .files
-                    .borrow_mut()
-                    .insert(name.to_owned(), file);
+                current.files.borrow_mut().insert(name.to_owned(), file);
             }
+            _ => Err("unknown command")?,
         }
     }
 
-    (root, directories)
+    Ok((root, directories))
 }
 
 #[derive(Debug)]
