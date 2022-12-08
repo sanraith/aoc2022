@@ -13,6 +13,7 @@ pub mod day04;
 pub mod day05;
 pub mod day06;
 pub mod day07;
+pub mod day08;
 
 // Re-exports
 pub use day01::Day01;
@@ -22,6 +23,7 @@ pub use day04::Day04;
 pub use day05::Day05;
 pub use day06::Day06;
 pub use day07::Day07;
+pub use day08::Day08;
 
 // List of solutions
 #[allow(unused_mut)]
@@ -34,6 +36,7 @@ pub fn create_list() -> Vec<SolutionType> {
         Day05::as_type(),
         Day06::as_type(),
         Day07::as_type(),
+        Day08::as_type(),
     ];
 
     list
