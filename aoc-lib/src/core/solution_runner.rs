@@ -119,7 +119,7 @@ pub fn run_solution<T: SyncStream + 'static>(day: YearDay, input: Input, tx: Arc
         return send_and_close(
             &tx,
             start,
-            SolveProgress::Error(format!("Unable to init solution: {}", err).to_owned()),
+            SolveProgress::Error(format!("Unable to initialize solution: {}", err).to_owned()),
         );
     }
     if let Err(_) = solve_part(&mut solution, 1, start, &ctx, &tx) {

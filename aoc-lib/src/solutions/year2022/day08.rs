@@ -26,7 +26,7 @@ impl Solution for Day08 {
             .map(|line| {
                 line.chars()
                     .map(|c| c.to_digit(10).and_then(|x| Some(x as i32)))
-                    .collect::<Option<_>>()
+                    .collect()
             })
             .collect::<Option<_>>()
             .ok_or("invalid input")?;
@@ -95,7 +95,7 @@ impl Day08 {
 }
 
 #[derive(Copy, Clone, Debug, Constructor, Add, Sub, AddAssign, SubAssign)]
-struct Point {
-    x: i32,
-    y: i32,
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
 }
