@@ -32,7 +32,7 @@ fn simulate_rope(rope_length: usize, ctx: &Context) -> HashSet<Point> {
             for (prev_idx, current_idx) in (0..rope_length).tuple_windows() {
                 let head = rope[prev_idx];
                 let tail = &mut rope[current_idx];
-                let diff = Point::new(head.x - tail.x, head.y - tail.y);
+                let diff = head - *tail;
                 let is_touching =
                     diff.x.abs() + diff.y.abs() < 2 || (diff.x.abs() == 1 && diff.y.abs() == 1);
                 if !is_touching {
