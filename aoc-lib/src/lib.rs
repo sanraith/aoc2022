@@ -1,6 +1,3 @@
-// Macro crates
-extern crate derive_more;
-
 // Module definitions
 pub mod core {
     pub mod file_util;
