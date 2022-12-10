@@ -5,8 +5,8 @@ use bracket_terminal::prelude::*;
 pub fn get_mouse_tile_pos(config: &Config) -> PointF {
     let (x, y) = INPUT.lock().mouse_pixel_pos();
     PointF {
-        x: x as f32 / config.tile_size_x as f32 / config.scale,
-        y: y as f32 / config.tile_size_y as f32 / config.scale,
+        x: x as f32 / config.tile_size_x as f32 / config.scale_x,
+        y: y as f32 / config.tile_size_y as f32 / config.scale_y,
     }
 }
 

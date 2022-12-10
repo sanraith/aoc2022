@@ -54,9 +54,9 @@ fn execute_program(ctx: &Context) -> GenericResult<(i32, Vec<char>)> {
 
 fn tick(cycle_count: &mut i32, signal_strength: &mut i32, screen: &mut Vec<char>, x: i32) {
     let pos = *cycle_count % screen.len() as i32;
-    screen[pos as usize] = match x >= pos % WIDTH - 1 && x <= pos % WIDTH + 1 {
-        true => PIXEL_ON,
-        false => PIXEL_OFF,
+    screen[pos as usize] = match pos % WIDTH - x {
+        -1..=1 => PIXEL_ON,
+        _ => PIXEL_OFF,
     };
 
     *cycle_count += 1;
