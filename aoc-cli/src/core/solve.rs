@@ -49,11 +49,15 @@ impl ProgressHandler for HandleProgress {
 }
 
 fn print_and_copy(part: u32, result: &SolveProgress, duration: &Duration, config: &Config) {
-    let result_text = match result {
+    let mut result_text = match result {
         SolveProgress::SuccessResult(r) => r.value.clone(),
         SolveProgress::ErrorResult(r) => format!("Error - {}", &r.value),
         _ => panic!("Not supported result!"),
     };
+
+    if result_text.contains("\n") {
+        result_text = format!("\n{}", &result_text);
+    }
 
     println!(
         "Part {} ({}): {}",

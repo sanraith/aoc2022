@@ -27,11 +27,7 @@ pub fn setup<T>(input: &str) -> (T, Context)
 where
     T: Solution + SolutionStatic,
 {
-    // Remove leading empty lines to be able to format input in tests nicer
-    let input = Regex::new(r"^(?:\s*\n)+")
-        .unwrap()
-        .replace(input, "")
-        .to_string();
+    let input = clean_raw_multiline(&input);
     let ctx = Context {
         raw_input: input,
         ..Default::default()
@@ -41,6 +37,14 @@ where
         .expect("solution should initialize without errors");
 
     (day, ctx)
+}
+
+/** Remove leading empty lines to be able to format input in tests nicer */
+pub fn clean_raw_multiline(input: &str) -> String {
+    Regex::new(r"^(?:\s*\n)+")
+        .unwrap()
+        .replace(input, "")
+        .to_string()
 }
 
 pub fn setup_from_file<T>() -> (T, Context)
