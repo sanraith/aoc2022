@@ -60,7 +60,7 @@ fn tick(cycle_count: &mut i32, signal_strength: &mut i32, screen: &mut Vec<char>
     };
 
     *cycle_count += 1;
-    if *cycle_count >= 20 && (*cycle_count - 20) % 40 == 0 {
+    if *cycle_count >= 20 && *cycle_count % 40 == 20 {
         *signal_strength += *cycle_count * x;
     }
 }

@@ -55,6 +55,7 @@ fn print_and_copy(part: u32, result: &SolveProgress, duration: &Duration, config
         _ => panic!("Not supported result!"),
     };
 
+    // Display multiline results in an empty line
     if result_text.contains("\n") {
         result_text = format!("\n{}", &result_text);
     }

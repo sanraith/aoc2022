@@ -33,8 +33,7 @@ fn simulate_rope(rope_length: usize, ctx: &Context) -> HashSet<Point> {
                 let head = rope[prev_idx];
                 let tail = &mut rope[current_idx];
                 let diff = head - *tail;
-                let is_touching =
-                    diff.x.abs() + diff.y.abs() < 2 || (diff.x.abs() == 1 && diff.y.abs() == 1);
+                let is_touching = diff.x.abs() <= 1 && diff.y.abs() <= 1;
                 if !is_touching {
                     *tail += Point::new(diff.x.signum(), diff.y.signum());
                     if current_idx == rope_length - 1 {
