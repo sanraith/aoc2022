@@ -1,8 +1,4 @@
-use crate::{
-    helpers::{re_capture_group, re_capture_groups},
-    solution::*,
-    util::GenericResult,
-};
+use crate::{solution::*, util::GenericResult};
 use itertools::Itertools;
 use regex::Regex;
 use std::cell::RefCell;
@@ -53,39 +49,35 @@ fn calc_monkey_business(ctx: &Context, divide_worry: i64, rounds: i64) -> Generi
 
 fn parse_monkeys(ctx: &Context) -> GenericResult<Vec<Monkey>> {
     let err = "invalid input";
-    let items_re = Regex::new(r"Starting items: (.*)\n")?;
-    let operation_re = Regex::new(r"Operation: new = (\S+) (\S) (\S+)")?;
-    let test_re = Regex::new(r"Test: divisible by (\d+)")?;
-    let true_re = Regex::new(r"If true: throw to monkey (\d+)")?;
-    let false_re = Regex::new(r"If false: throw to monkey (\d+)")?;
+    let monkey_re = Regex::new(r"items: (.*)\n.*= (\S+) (\S) (\S+)\n.* (\d+)\n.* (\d+)\n.* (\d+)")?;
 
     let input = ctx.input();
     let definitions = input.split("\n\n");
     let mut monkeys = Vec::new();
-    for def in definitions {
-        let items = re_capture_group(&items_re, def)
+    for monkey_def in definitions {
+        let (_, items, a, op, b, test_num, true_target, false_target) = monkey_re
+            .captures(monkey_def)
             .ok_or(err)?
+            .iter()
+            .filter_map(|m| m)
+            .map(|m| m.as_str().to_owned())
+            .collect_tuple()
+            .ok_or(err)?;
+        let items = items
             .split(", ")
             .map(|x| x.parse())
             .collect::<Result<Vec<_>, _>>()?;
-        let operation_parts = re_capture_groups(&operation_re, def)
-            .ok_or(err)?
-            .into_iter()
-            .map(|x| x.to_owned())
-            .collect_tuple::<(_, _, _)>()
-            .ok_or(err)?;
-        let test_num = re_capture_group(&test_re, def).ok_or(err)?.parse()?;
-        let true_target = re_capture_group(&true_re, def).ok_or(err)?.parse()?;
-        let false_target = re_capture_group(&false_re, def).ok_or(err)?.parse()?;
+        let test_num = test_num.parse()?;
+        let true_target = true_target.parse()?;
+        let false_target = false_target.parse()?;
 
         let operation = move |old: i64, modulus: i64| {
             let parse_num = |x: &String| match x.as_str() {
                 "old" => old,
                 num_str => num_str.parse().unwrap(),
             };
-            let (a, op, b) = &operation_parts;
-            let a = parse_num(a);
-            let b = parse_num(b);
+            let a = parse_num(&a);
+            let b = parse_num(&b);
 
             match op.as_str() {
                 "+" => (a + b) % modulus,
