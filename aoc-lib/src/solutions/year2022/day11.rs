@@ -1,7 +1,6 @@
 use crate::{solution::*, util::GenericResult};
 use itertools::Itertools;
 use regex::Regex;
-use std::cell::RefCell;
 
 #[derive(Default)]
 pub struct Day11;
@@ -26,20 +25,19 @@ impl Solution for Day11 {
 }
 
 fn calc_monkey_business(ctx: &Context, divide_worry: i64, rounds: i64) -> GenericResult<i64> {
-    let monkeys = parse_monkeys(ctx)?;
+    let mut monkeys = parse_monkeys(ctx)?;
     let modulus = monkeys.iter().fold(1, |a, m| a * m.test_num);
-    for _ in 0..rounds {
-        for monkey in &monkeys {
-            while monkey.has_items() {
-                let (item, target) = monkey.throw_item(divide_worry, modulus);
-                monkeys[target].catch_item(item);
+    for _round in 0..rounds {
+        for from_idx in 0..monkeys.len() {
+            while let Some((item, to_idx)) = monkeys[from_idx].throw_item(divide_worry, modulus) {
+                monkeys[to_idx].catch_item(item);
             }
         }
     }
 
     let monkey_business_level = monkeys
         .iter()
-        .map(|m| m.inspected_count())
+        .map(|m| m.inspected_count)
         .sorted_by(|a, b| b.cmp(a))
         .take(2)
         .fold(1, |a, x| a * x);
@@ -71,7 +69,7 @@ fn parse_monkeys(ctx: &Context) -> GenericResult<Vec<Monkey>> {
         let true_target = true_target.parse()?;
         let false_target = false_target.parse()?;
 
-        let operation = move |old: i64, modulus: i64| {
+        let operation = move |old: i64| {
             let parse_num = |x: &String| match x.as_str() {
                 "old" => old,
                 num_str => num_str.parse().unwrap(),
@@ -80,14 +78,14 @@ fn parse_monkeys(ctx: &Context) -> GenericResult<Vec<Monkey>> {
             let b = parse_num(&b);
 
             match op.as_str() {
-                "+" => (a + b) % modulus,
-                _ => (a * b) % modulus,
+                "+" => a + b,
+                _ => a * b,
             }
         };
 
         monkeys.push(Monkey {
-            items: RefCell::new(items),
-            inspected_count: RefCell::new(0),
+            items,
+            inspected_count: 0,
             operation: Box::new(operation),
             test_num,
             true_target,
@@ -99,34 +97,29 @@ fn parse_monkeys(ctx: &Context) -> GenericResult<Vec<Monkey>> {
 }
 
 struct Monkey {
-    items: RefCell<Vec<i64>>,
-    inspected_count: RefCell<i64>,
-    operation: Box<dyn Fn(i64, i64) -> i64>,
+    items: Vec<i64>,
+    inspected_count: i64,
+    operation: Box<dyn Fn(i64) -> i64>,
     test_num: i64,
     true_target: usize,
     false_target: usize,
 }
 impl Monkey {
-    fn throw_item(&self, divide_worry: i64, modulus: i64) -> (i64, usize) {
-        *self.inspected_count.borrow_mut() += 1;
-        let mut worry = self.items.borrow_mut().remove(0);
-        worry = (self.operation)(worry, modulus) / divide_worry;
-        if worry % self.test_num == 0 {
-            (worry, self.true_target)
-        } else {
-            (worry, self.false_target)
+    fn throw_item(&mut self, divide_worry: i64, modulus: i64) -> Option<(i64, usize)> {
+        if self.items.len() == 0 {
+            return None;
+        }
+
+        self.inspected_count += 1;
+        let worry = (self.operation)(self.items.remove(0)) % modulus / divide_worry;
+
+        match worry % self.test_num {
+            0 => Some((worry, self.true_target)),
+            _ => Some((worry, self.false_target)),
         }
     }
 
-    fn catch_item(&self, item: i64) {
-        self.items.borrow_mut().push(item);
-    }
-
-    fn has_items(&self) -> bool {
-        self.items.borrow().len() > 0
-    }
-
-    fn inspected_count(&self) -> i64 {
-        *self.inspected_count.borrow()
+    fn catch_item(&mut self, item: i64) {
+        self.items.push(item);
     }
 }
