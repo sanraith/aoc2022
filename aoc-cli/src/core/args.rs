@@ -28,6 +28,8 @@ pub enum Command {
         /// List of days to solve. Defaults to [all implemented days].
         days: Vec<u32>,
     },
-    // Display the pretty UI with snowing effects
+    /// Display the pretty UI with snowing effects.
     Ui,
+    /// Generate 3D height map from day 12 input.
+    Day12Extra,
 }

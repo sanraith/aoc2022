@@ -17,6 +17,9 @@
 # Debug webassembly package
 **/pkg
 
+# --- Blender ---
+*.blend1
+
 # --- NODE ---
 /dist
 

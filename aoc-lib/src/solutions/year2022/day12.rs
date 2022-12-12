@@ -67,7 +67,7 @@ fn find_paths(map: &Map) -> (Vec<Vec<Option<i32>>>, Option<i32>) {
     (step_map, min_steps)
 }
 
-fn parse_height_map(ctx: &Context) -> GenericResult<Map> {
+pub fn parse_height_map(ctx: &Context) -> GenericResult<Map> {
     let input = ctx.input();
     let lines = input.lines().collect_vec();
     let height = lines.len();
@@ -103,12 +103,12 @@ fn parse_height_map(ctx: &Context) -> GenericResult<Map> {
 }
 
 #[derive(Debug, Clone)]
-struct Map {
-    width: usize,
-    height: usize,
-    start: Point,
-    end: Point,
-    tiles: Vec<Vec<i32>>,
+pub struct Map {
+    pub width: usize,
+    pub height: usize,
+    pub start: Point,
+    pub end: Point,
+    pub tiles: Vec<Vec<i32>>,
 }
 
 #[derive(

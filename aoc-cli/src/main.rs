@@ -1,4 +1,7 @@
-use aoc::{solutions, util::*};
+use aoc::{
+    solutions::{self},
+    util::*,
+};
 use aoc_cli::{args::*, config::*, scaffold, solve, timing};
 use aoc_ui;
 use clap::Parser;
@@ -47,6 +50,7 @@ fn main() {
             solve_days(config, year, days);
         }
         Some(Command::Ui) => _ = aoc_ui::entry::main(),
+        Some(Command::Day12Extra) => extras::day12_extra(),
         None => {
             if let Some(yd) = solutions::create_map().keys().sorted().rev().next() {
                 solve_days(config, yd.year, vec![yd.clone()]);
@@ -94,5 +98,52 @@ fn scaffold(config: &Config, year: Option<i32>, days: Vec<u32>, inputs: bool) {
                 )
             }
         };
+    }
+}
+
+mod extras {
+    use aoc::{inputs, solution::Context, solutions::year2022, util::YearDay};
+    use itertools::Itertools;
+    use std::{fs::File, io::Write};
+
+    pub fn day12_extra() {
+        let ctx = Context {
+            raw_input: inputs::get(&YearDay::new(2022, 12)).unwrap().to_owned(),
+            ..Default::default()
+        };
+
+        let map = year2022::day12::parse_height_map(&ctx).unwrap();
+        let map = map
+            .tiles
+            .into_iter()
+            .map(|l| l.into_iter().map(|x| x as f32 + 0.0).collect_vec())
+            .collect_vec();
+
+        let map = scale(map, 4);
+        let map = avg(map);
+        let map = avg(map);
+
+        let out = map.iter().map(|l| l.iter().join(" ")).join("\n");
+        let mut file = File::create("extras/height_map_avg4.dat").unwrap();
+        file.write_all(out.as_bytes()).unwrap();
+    }
+
+    fn scale(map: Vec<Vec<f32>>, count: usize) -> Vec<Vec<f32>> {
+        map.into_iter()
+            .flat_map(|l| vec![l.clone(); count])
+            .map(|l| l.into_iter().flat_map(|x| vec![x; count]).collect_vec())
+            .collect_vec()
+    }
+
+    fn avg(map: Vec<Vec<f32>>) -> Vec<Vec<f32>> {
+        let width = map.get(0).unwrap().len();
+        let height = map.len();
+        let mut avg_map = vec![vec![0.0; width]; height];
+        itertools::iproduct!(1..width - 1, 1..height - 1).for_each(|(x, y)| {
+            avg_map[y][x] =
+                (map[y][x] + map[y - 1][x] + map[y][x + 1] + map[y + 1][x] + map[y][x - 1]) as f32
+                    / 5.0;
+        });
+        return avg_map;
     }
 }
