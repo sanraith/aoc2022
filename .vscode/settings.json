@@ -11,6 +11,7 @@
         "chrono",
         "clearscreen",
         "Datelike",
+        "Deque",
         "iproduct",
         "itertools",
         "Keypresses",
