@@ -24,7 +24,7 @@ impl Solution for Day09 {
 fn simulate_rope(rope_length: usize, ctx: &Context) -> HashSet<Point> {
     let steps = parse_steps(ctx);
     let mut rope = (0..rope_length).map(|_| Point::new(0, 0)).collect_vec();
-    let mut visited: HashSet<Point> = HashSet::from_iter([Point::new(0, 0)]);
+    let mut visited: HashSet<Point> = HashSet::from([Point::new(0, 0)]);
 
     for (dir, count) in steps {
         for _ in 0..count {
@@ -47,7 +47,7 @@ fn simulate_rope(rope_length: usize, ctx: &Context) -> HashSet<Point> {
 }
 
 fn parse_steps(ctx: &Context) -> Vec<(Point, i32)> {
-    let directions: HashMap<char, Point> = HashMap::from_iter([
+    let directions: HashMap<char, Point> = HashMap::from([
         ('U', Point::new(0, -1)),
         ('D', Point::new(0, 1)),
         ('L', Point::new(-1, 0)),

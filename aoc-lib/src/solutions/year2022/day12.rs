@@ -1,10 +1,7 @@
-use crate::solution::*;
+use crate::{solution::*, util::GenericResult};
 use derive_more::{Add, AddAssign, Constructor, Sub, SubAssign};
 use itertools::Itertools;
 use std::collections::VecDeque;
-
-const CHARCODE_LOWERCASE_A: i32 = 97;
-const CHARCODE_LOWERCASE_Z: i32 = 122;
 
 #[derive(Default)]
 pub struct Day12;
@@ -14,7 +11,7 @@ impl Solution for Day12 {
     }
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
-        let map = parse_height_map(ctx);
+        let map = parse_height_map(ctx)?;
         let (step_map, _) = find_paths(&map);
         let fewest_steps = step_map[map.start.y as usize][map.start.x as usize]
             .ok_or("no path available from start")?;
@@ -23,7 +20,7 @@ impl Solution for Day12 {
     }
 
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
-        let map = parse_height_map(ctx);
+        let map = parse_height_map(ctx)?;
         let (_, shortest_path) = find_paths(&map);
         let shortest_path = shortest_path.ok_or("no path available from any elevation 'a'")?;
 
@@ -33,16 +30,14 @@ impl Solution for Day12 {
 
 fn find_paths(map: &Map) -> (Vec<Vec<Option<i32>>>, Option<i32>) {
     let directions = [
-        Point::new(0, 1),
         Point::new(1, 0),
-        Point::new(0, -1),
+        Point::new(0, 1),
         Point::new(-1, 0),
+        Point::new(0, -1),
     ];
-    let mut step_map: Vec<Vec<Option<i32>>> = (0..map.height)
-        .map(|_| (0..map.width).map(|_| None).collect_vec())
-        .collect_vec();
-    let mut stack = VecDeque::from_iter([(map.end, 0)]);
     let mut min_steps = None;
+    let mut stack = VecDeque::from([(map.end, 0)]);
+    let mut step_map = vec![vec![None::<i32>; map.width]; map.height];
 
     while let Some((pos, steps)) = stack.pop_front() {
         let height = map.tiles[pos.y as usize][pos.x as usize];
@@ -72,40 +67,39 @@ fn find_paths(map: &Map) -> (Vec<Vec<Option<i32>>>, Option<i32>) {
     (step_map, min_steps)
 }
 
-fn parse_height_map(ctx: &Context) -> Map {
+fn parse_height_map(ctx: &Context) -> GenericResult<Map> {
     let input = ctx.input();
     let lines = input.lines().collect_vec();
     let height = lines.len();
     let width = lines.get(0).map(|line| line.len()).unwrap_or(0);
 
-    let mut start = Point::default();
-    let mut end = Point::default();
-    let mut tiles = Vec::with_capacity(height);
+    let mut start = None;
+    let mut end = None;
+    let mut tiles = vec![vec![]; height];
     for (y, line) in lines.into_iter().enumerate() {
-        tiles.push(Vec::with_capacity(width));
         for (x, c) in line.chars().enumerate() {
-            let value = match c {
+            tiles[y].push(match c {
+                'a'..='z' => c as i32 - b'a' as i32,
                 'S' => {
-                    start = Point::new(x as i32, y as i32);
+                    start = Some(Point::new(x as i32, y as i32));
                     0
                 }
                 'E' => {
-                    end = Point::new(x as i32, y as i32);
-                    CHARCODE_LOWERCASE_Z - CHARCODE_LOWERCASE_A
+                    end = Some(Point::new(x as i32, y as i32));
+                    (b'z' - b'a') as i32
                 }
-                _ => c as i32 - CHARCODE_LOWERCASE_A,
-            };
-            tiles[y].push(value);
+                _ => Err("invalid character in input")?,
+            });
         }
     }
 
-    Map {
+    Ok(Map {
         width,
         height,
-        start,
-        end,
+        start: start.ok_or("start not found in input")?,
+        end: end.ok_or("end not found in input")?,
         tiles,
-    }
+    })
 }
 
 #[derive(Debug, Clone)]
