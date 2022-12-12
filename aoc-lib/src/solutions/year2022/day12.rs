@@ -1,7 +1,7 @@
 use crate::solution::*;
 use derive_more::{Add, AddAssign, Constructor, Sub, SubAssign};
 use itertools::Itertools;
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 const CHARCODE_LOWERCASE_A: i32 = 97;
 const CHARCODE_LOWERCASE_Z: i32 = 122;
@@ -15,70 +15,68 @@ impl Solution for Day12 {
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
         let map = parse_height_map(ctx);
-        let fewest_steps = find_shortest_path(&map, map.start).ok_or("no path exists")?;
+        let (step_map, _) = find_paths(&map);
+        let fewest_steps = step_map[map.start.y as usize][map.start.x as usize]
+            .ok_or("no path available from start")?;
 
         Ok(fewest_steps.to_string())
     }
 
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
         let map = parse_height_map(ctx);
-        let shortest_path = itertools::iproduct!(0..map.width, 0..map.height)
-            .filter(|(x, y)| map.tiles[*y][*x] == 0)
-            .filter_map(|(x, y)| {
-                ctx.progress((x * map.height + y) as f32 / (map.width * map.height) as f32);
-                find_shortest_path(&map, Point::new(x as i32, y as i32))
-            })
-            .sorted()
-            .next()
-            .ok_or("no path exists")?;
+        let (_, shortest_path) = find_paths(&map);
+        let shortest_path = shortest_path.ok_or("no path available from any elevation 'a'")?;
 
         Ok(shortest_path.to_string())
     }
 }
 
-fn find_shortest_path(map: &Map, start: Point) -> Option<i32> {
-    let mut visited: HashSet<Point> = HashSet::from_iter([start]);
-    let mut stack = VecDeque::from_iter([(start, 0)]);
+fn find_paths(map: &Map) -> (Vec<Vec<Option<i32>>>, Option<i32>) {
     let directions = [
         Point::new(0, 1),
         Point::new(1, 0),
         Point::new(0, -1),
         Point::new(-1, 0),
     ];
+    let mut step_map: Vec<Vec<Option<i32>>> = (0..map.height)
+        .map(|_| (0..map.width).map(|_| None).collect_vec())
+        .collect_vec();
+    let mut stack = VecDeque::from_iter([(map.end, 0)]);
+    let mut min_steps = None;
 
     while let Some((pos, steps)) = stack.pop_front() {
-        if pos == map.end {
-            return Some(steps);
+        let height = map.tiles[pos.y as usize][pos.x as usize];
+        if height == 0 && steps < min_steps.unwrap_or(i32::MAX) {
+            min_steps = Some(steps);
         }
 
-        let height = map.tiles[pos.y as usize][pos.x as usize];
         for direction in &directions {
             let next_pos = pos + *direction;
-            if visited.contains(&next_pos)
-                || next_pos.x < 0
+            if next_pos.x < 0
                 || next_pos.x >= map.width as i32
                 || next_pos.y < 0
                 || next_pos.y >= map.height as i32
+                || step_map[next_pos.y as usize][next_pos.x as usize].is_some()
             {
                 continue;
             }
 
             let next_height = map.tiles[next_pos.y as usize][next_pos.x as usize];
-            if next_height - height <= 1 {
+            if height - next_height <= 1 {
                 stack.push_back((next_pos, steps + 1));
-                visited.insert(next_pos);
+                step_map[next_pos.y as usize][next_pos.x as usize] = Some(steps + 1);
             }
         }
     }
 
-    return None;
+    (step_map, min_steps)
 }
 
 fn parse_height_map(ctx: &Context) -> Map {
     let input = ctx.input();
     let lines = input.lines().collect_vec();
     let height = lines.len();
-    let width = lines.get(0).map(|l| l.len()).unwrap_or(0);
+    let width = lines.get(0).map(|line| line.len()).unwrap_or(0);
 
     let mut start = Point::default();
     let mut end = Point::default();
@@ -95,7 +93,7 @@ fn parse_height_map(ctx: &Context) -> Map {
                     end = Point::new(x as i32, y as i32);
                     CHARCODE_LOWERCASE_Z - CHARCODE_LOWERCASE_A
                 }
-                _ => c as i32 - 97,
+                _ => c as i32 - CHARCODE_LOWERCASE_A,
             };
             tiles[y].push(value);
         }
