@@ -236,7 +236,7 @@ fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
                 .next()
                 .and_then(ElementRef::wrap)
                 .and_then(|x| Some(x.text().join(" ")))
-                .and_then(|x| Some((x.to_lowercase().contains("example"), elem.text().join(" "))))
+                .and_then(|x| Some((x.to_lowercase().contains("example"), elem.text().join(""))))
         })
         .collect::<Vec<_>>();
 
