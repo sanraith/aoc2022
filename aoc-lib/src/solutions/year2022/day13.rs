@@ -10,10 +10,9 @@ impl Solution for Day13 {
     }
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
-        let pairs = parse_packet_pairs(ctx)?;
         let mut sum = 0;
-        for (index, (a, b)) in pairs.into_iter().enumerate() {
-            if let Ordering::Less = a.cmp(&b) {
+        for (index, (a, b)) in parse_packet_pairs(ctx)?.into_iter().enumerate() {
+            if a < b {
                 sum += index + 1;
             }
         }
@@ -43,8 +42,8 @@ fn parse_packet_pairs(ctx: &Context) -> GenericResult<Vec<(Packet, Packet)>> {
     let pairs = ctx
         .input()
         .split("\n\n")
-        .map(|x| {
-            x.split("\n")
+        .map(|pair| {
+            pair.lines()
                 .filter_map(|x| parse_packet(&x.chars().collect_vec()).ok())
                 .map(|x| x.0)
                 .collect_tuple::<(_, _)>()
@@ -99,10 +98,9 @@ impl Ord for Packet {
             (Packet::Int(a), Packet::Int(b)) => a.cmp(b),
             (Packet::List(a), Packet::List(b)) => {
                 for index in 0..a.len().min(b.len()) {
-                    let order = a[index].cmp(&b[index]);
-                    match order {
+                    match a[index].cmp(&b[index]) {
                         Ordering::Equal => (),
-                        _ => return order,
+                        order => return order,
                     }
                 }
 
