@@ -1,16 +1,17 @@
 use crate::{solution::*, util::GenericResult};
 use derive_more::{Add, AddAssign, Constructor, Sub, SubAssign};
 use itertools::Itertools;
-use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
-#[allow(dead_code)]
 static TILE_AIR: char = ' ';
 static TILE_ROCK: char = '#';
 static TILE_SAND: char = 'o';
 static SAND_START: Point = Point { x: 500, y: 0 };
-static SAND_DIRECTIONS: Lazy<[Point; 3]> =
-    Lazy::new(|| [Point::new(0, 1), Point::new(-1, 1), Point::new(1, 1)]);
+static SAND_DIRECTIONS: [Point; 3] = [
+    Point { x: 0, y: 1 },
+    Point { x: -1, y: 1 },
+    Point { x: 1, y: 1 },
+];
 
 #[derive(Default)]
 pub struct Day14;
@@ -53,18 +54,17 @@ fn fall_sand(pos: &Point, cave: &mut Cave, has_floor: bool) -> bool {
         .find(|p| !cave.map.contains_key(&p))
     {
         pos = next;
-        if !has_floor && next.y > cave.bottom_right.y {
+        if !has_floor && pos.y > cave.bottom_right.y {
             rested = false;
             break;
         }
-        if has_floor && next.y == cave.floor - 1 {
+        if has_floor && pos.y == cave.floor - 1 {
             break;
         }
     }
 
     if rested {
-        cave.map.insert(pos, TILE_SAND);
-        update_bounds(cave, &pos);
+        cave.insert(pos, TILE_SAND);
     }
 
     rested
@@ -91,8 +91,7 @@ fn parse_cave(ctx: &Context) -> GenericResult<Cave> {
             let coords =
                 itertools::iproduct!(a.x.min(b.x)..=a.x.max(b.x), a.y.min(b.y)..=a.y.max(b.y));
             for (x, y) in coords {
-                cave.map.insert(Point::new(x, y), TILE_ROCK);
-                update_bounds(&mut cave, &Point::new(x, y));
+                cave.insert(Point::new(x, y), TILE_ROCK);
             }
         }
     }
@@ -101,14 +100,8 @@ fn parse_cave(ctx: &Context) -> GenericResult<Cave> {
     Ok(cave)
 }
 
-fn update_bounds(cave: &mut Cave, last_point: &Point) {
-    cave.top_left.x = cave.top_left.x.min(last_point.x);
-    cave.top_left.y = cave.top_left.y.min(last_point.y);
-    cave.bottom_right.x = cave.bottom_right.x.max(last_point.x);
-    cave.bottom_right.y = cave.bottom_right.y.max(last_point.y);
-}
-
-fn _print_cave(cave: &Cave) {
+#[allow(dead_code)]
+fn print_cave(cave: &Cave) {
     println!("{:?}..{:?}", cave.top_left, cave.bottom_right);
     for y in cave.top_left.y..=cave.bottom_right.y {
         for x in cave.top_left.x..=cave.bottom_right.x {
@@ -128,11 +121,20 @@ struct Cave {
     bottom_right: Point,
     floor: i32,
 }
+impl Cave {
+    fn insert(&mut self, point: Point, tile: char) -> Option<char> {
+        self.top_left.x = self.top_left.x.min(point.x);
+        self.top_left.y = self.top_left.y.min(point.y);
+        self.bottom_right.x = self.bottom_right.x.max(point.x);
+        self.bottom_right.y = self.bottom_right.y.max(point.y);
+        self.map.insert(point, tile)
+    }
+}
 
 #[derive(
     Copy, Clone, Debug, Default, Hash, PartialEq, Eq, Constructor, Add, Sub, AddAssign, SubAssign,
 )]
-pub struct Point {
+struct Point {
     pub x: i32,
     pub y: i32,
 }
