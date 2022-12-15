@@ -9,7 +9,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-pub fn run_solutions(config: &Config) -> GenericResult {
+pub fn run_all_solutions(config: &Config) -> GenericResult<Duration> {
     let solutions = solutions::create_map();
     let solutions_by_year: HashMap<i32, Vec<&SolutionType>> =
         solutions.iter().fold(HashMap::new(), |mut map, (k, v)| {
@@ -21,17 +21,18 @@ pub fn run_solutions(config: &Config) -> GenericResult {
         .sorted_by(|(a, _), (b, _)| a.cmp(b))
         .map(|(y, days)| (y, days.into_sorted_by(|a, b| a.info.day.cmp(&b.info.day))));
 
+    let mut total_duration = Duration::default();
     for (year, solutions) in sorted_solutions {
         println!("\n--- Year {} ---", year);
         for day in solutions {
-            run_solution_internal(config, day)?
+            total_duration += run_solution_internal(config, day)?;
         }
     }
 
-    Ok(())
+    Ok(total_duration)
 }
 
-pub fn run_solution(config: &Config, year: i32, day: u32) -> GenericResult {
+pub fn run_solution(config: &Config, year: i32, day: u32) -> GenericResult<Duration> {
     let solutions = solutions::create_map();
     let day_type = solutions
         .get(&YearDay { year, day })
@@ -98,7 +99,7 @@ fn print_and_copy(
     };
 }
 
-fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericResult {
+fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericResult<Duration> {
     let SolutionInfo { year, day, .. } = day_type.info;
     let year_day = YearDay::new(year, day);
     println!("\nDay {} - {}", day_type.info.day, day_type.info.title);
@@ -113,6 +114,7 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
         let mut _dbg_sleep_duration = Duration::default();
 
         let mut prev_line_length = print("Part 1...", 0);
+        let mut solution_duration = Duration::default();
         loop {
             _dbg_loop_count += 1;
             let before_lock = SystemTime::now();
@@ -153,7 +155,10 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
                         &config,
                         prev_line_length,
                     ),
-                    SolveProgress::Done(p) => println!("Total: {}", fmt_duration(&p.duration)),
+                    SolveProgress::Done(p) => {
+                        println!("Runtime: {}", fmt_duration(&p.duration));
+                        solution_duration = p.duration;
+                    }
                     SolveProgress::Error(p) => println!("\nError: {}", p),
                     SolveProgress::Progress(p) => {
                         prev_line_length = print(
@@ -174,8 +179,9 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
         //     "loops: {}, lock: {:?}, sleep: {:?}",
         //     _dbg_loop_count, _dbg_lock_duration, _dbg_sleep_duration
         // );
+        solution_duration
     });
-    t.join().unwrap();
 
-    Ok(())
+    let duration = t.join().unwrap();
+    Ok(duration)
 }

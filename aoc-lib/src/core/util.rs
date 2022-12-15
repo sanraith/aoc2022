@@ -24,7 +24,7 @@ pub fn fmt_duration(d: &Duration) -> String {
     let scales = [
         (60_000_000, "min", 2),
         (1_000_000, "s", 3),
-        (1_000, "ms", 3),
+        (1_000, "ms", 2),
         (1, "µs", 0),
     ];
     let micros = d.as_micros() as f64;

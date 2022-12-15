@@ -6,6 +6,8 @@ use aoc_cli::{args::*, config::*, scaffold, solve, timing};
 use aoc_ui;
 use clap::Parser;
 use itertools::Itertools;
+use std::time::Duration;
+
 fn main() {
     let config = Config::load_from_file(DEFAULT_CONFIG_PATH)
         .or_else(|_| {
@@ -69,8 +71,17 @@ fn solve_days(config: Config, year: i32, days: Vec<YearDay>) {
         .collect::<Vec<_>>()
         .join(", ");
     println!("Solving days for {}: {}", year, days_str);
-    days.iter()
-        .for_each(|yd| solve::run_solution(&config, yd.year, yd.day).unwrap())
+    let total_duration = days.iter().fold(Duration::default(), |a, yd| {
+        a + solve::run_solution(&config, yd.year, yd.day).unwrap()
+    });
+
+    if days.len() > 1 {
+        println!(
+            "\n{} solutions run for {} in total.",
+            days.len(),
+            fmt_duration(&total_duration)
+        );
+    }
 }
 
 fn scaffold(config: &Config, year: Option<i32>, days: Vec<u32>, inputs: bool) {

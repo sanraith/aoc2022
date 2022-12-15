@@ -12,15 +12,15 @@ All scaffold related requests are cached locally.
 - `npm install`
 - Download your own inputs
   - manually from <https://adventofcode.com> to _aoc_lib/input/yearXXXX/dayXX.txt_,
-  - or use `cargo run -- scaffold --inputs` to download them automatically.
+  - or use `cargo run scaffold --inputs` to download them automatically.
 
 ## Running the solutions
 
 Run the selected solutions and optionally copy the result to the clipboard. See config options in the generated `aoc_config.ini`.
 
 - `cargo run`: Solve the last available day.
-- `cargo run -- solve`: Solve all days in the current year.
-- `cargo run -- ui`: Display a pretty UI to solve all days in the current year. (WIP)
+- `cargo run solve`: Solve all days in the current year.
+- `cargo run ui`: Display a pretty UI to solve all days in the current year. (WIP)
 - `cargo run -- --help`: Display the available options.
 
 ## Testing
@@ -32,9 +32,9 @@ Run the selected solutions and optionally copy the result to the clipboard. See 
 
 Automatically download input and prepare test and solution files for the given day.
 
-- `cargo run -- scaffold`: Scaffolds the latest available day.
-- `cargo run -- scaffold --year 2021 1,2,5`: Scaffolds the specified days.
-- `cargo run -- scaffold --help`: Display all available options.
+- `cargo run scaffold`: Scaffolds the latest available day.
+- `cargo run scaffold --year 2021 1,2,5`: Scaffolds the specified days.
+- `cargo run scaffold --help`: Display all available options.
 
 ## WASM build
 

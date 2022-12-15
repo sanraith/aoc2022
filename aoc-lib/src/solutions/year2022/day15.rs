@@ -22,12 +22,14 @@ impl Solution for Day15 {
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
         let sensors = parse_input(ctx)?;
-        let coverages = sensors
+        let overlapping_ranges = sensors
             .iter()
             .filter_map(|x| x.coverage_at_y(self.part1_scan_y))
             .collect_vec();
 
-        let (covered_area, ..) = covered_area(coverages)?;
+        let covered_area = disjoint_ranges(overlapping_ranges)?
+            .iter()
+            .fold(0, |a, x| a + x.end - x.start);
         let beacons_in_area = sensors
             .iter()
             .filter(|s| s.closest_beacon.y == self.part1_scan_y)
@@ -46,16 +48,16 @@ impl Solution for Day15 {
         let beacon_pos = scan_range
             .clone()
             .rev()
-            .map(|y| {
+            .find_map(|y| {
                 ctx.progress((scan_range.end - y) as f32 / scan_range.end as f32);
 
-                let coverages = sensors
+                let overlapping_ranges = sensors
                     .iter()
                     .filter_map(|x| x.coverage_at_y(y))
                     .collect_vec();
-                let (_, parts) = covered_area(coverages).ok()?;
 
-                parts
+                disjoint_ranges(overlapping_ranges)
+                    .ok()?
                     .iter()
                     .filter(|p| p.start <= scan_range.end && p.end >= scan_range.start)
                     .sorted_by(|a, b| a.start.cmp(&b.start))
@@ -63,7 +65,6 @@ impl Solution for Day15 {
                     .find(|(a, b)| a.end != b.start)
                     .map(|(a, _)| Point::new(a.end, y))
             })
-            .find_map(|p| p)
             .ok_or("could not find beacon")?;
         let tuning_frequency = beacon_pos.x * 4000000 + beacon_pos.y;
 
@@ -71,10 +72,10 @@ impl Solution for Day15 {
     }
 }
 
-fn covered_area(mut ranges: Vec<Range<i64>>) -> GenericResult<(i64, Vec<Range<i64>>)> {
-    let mut covered_parts = Vec::<Range<i64>>::new();
+fn disjoint_ranges(mut ranges: Vec<Range<i64>>) -> GenericResult<Vec<Range<i64>>> {
+    let mut covered_ranges = Vec::<Range<i64>>::new();
     'next_range: while let Some(mut range) = ranges.pop() {
-        for covered in &covered_parts {
+        for covered in &covered_ranges {
             let overlap = range.start.max(covered.start)..range.end.min(covered.end);
             if overlap.start >= overlap.end {
                 continue;
@@ -86,24 +87,22 @@ fn covered_area(mut ranges: Vec<Range<i64>>) -> GenericResult<(i64, Vec<Range<i6
                     continue 'next_range;
                 }
                 _ if range.start <= covered.start && range.end >= covered.end => {
-                    // cut away middle
+                    // cut middle out
                     ranges.push(range.start..covered.start);
-                    ranges.push(covered.end..range.end);
-                    continue 'next_range;
+                    range.start = covered.end;
                 }
-                _ if covered.start <= range.start => range = covered.end..range.end, // cut away start
-                _ if covered.end >= range.end => range = range.start..covered.start, // cut away end
+                _ if covered.start <= range.start => range = covered.end..range.end, // cut start put
+                _ if covered.end >= range.end => range = range.start..covered.start, // cut end out
                 _ => Err("unhandled range overlap")?,
             };
         }
 
         if range.start < range.end {
-            covered_parts.push(range);
+            covered_ranges.push(range);
         }
     }
 
-    let area = covered_parts.iter().fold(0, |a, x| a + x.end - x.start);
-    Ok((area, covered_parts))
+    Ok(covered_ranges)
 }
 
 fn parse_input(ctx: &Context) -> GenericResult<Vec<Sensor>> {

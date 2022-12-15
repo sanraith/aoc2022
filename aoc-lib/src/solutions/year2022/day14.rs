@@ -34,6 +34,7 @@ impl Solution for Day14 {
         let mut cave = parse_cave(ctx)?;
         let mut count = 0;
         while fall_sand(&SAND_START, &mut cave, true) {
+            ctx.progress((cave.floor - cave.top_left.y) as f32 / cave.floor as f32);
             count += 1;
         }
 
