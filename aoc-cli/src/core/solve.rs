@@ -48,7 +48,23 @@ impl ProgressHandler for HandleProgress {
     }
 }
 
-fn print_and_copy(part: u32, result: &SolveProgress, duration: &Duration, config: &Config) {
+/// Prints over the current line with \r
+fn print(content: &str, prev_line_length: usize) -> usize {
+    let spaces = String::from_iter(
+        (0..(prev_line_length as i32 - content.len() as i32).max(0)).map(|_| ' '),
+    );
+    print!("\r{}", format!("{}{}", content, spaces));
+    io::stdout().flush().unwrap();
+    content.len()
+}
+
+fn print_and_copy(
+    part: u32,
+    result: &SolveProgress,
+    duration: &Duration,
+    config: &Config,
+    prev_line_length: usize,
+) {
     let mut result_text = match result {
         SolveProgress::SuccessResult(r) => r.value.clone(),
         SolveProgress::ErrorResult(r) => format!("Error - {}", &r.value),
@@ -59,13 +75,15 @@ fn print_and_copy(part: u32, result: &SolveProgress, duration: &Duration, config
     if result_text.contains("\n") {
         result_text = format!("\n{}", &result_text);
     }
-
-    println!(
+    let content = format!(
         "Part {} ({}): {}",
         part,
         fmt_duration(duration),
         &result_text
     );
+    print(&content, prev_line_length);
+    println!("");
+
     if config.copy_result_to_clipboard {
         if let SolveProgress::SuccessResult(_) = &result {
             match Clipboard::new() {
@@ -77,7 +95,7 @@ fn print_and_copy(part: u32, result: &SolveProgress, duration: &Duration, config
                 Err(err) => println!("Warning: could access clipboard! {}", err),
             }
         }
-    }
+    };
 }
 
 fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericResult {
@@ -94,6 +112,7 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
         let mut _dbg_lock_duration = Duration::default();
         let mut _dbg_sleep_duration = Duration::default();
 
+        let mut prev_line_length = print("Part 1...", 0);
         loop {
             _dbg_loop_count += 1;
             let before_lock = SystemTime::now();
@@ -115,18 +134,38 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
             for progress in items {
                 match &progress {
                     SolveProgress::SuccessResult(p) => {
-                        print_and_copy(p.part.unwrap() as u32, &progress, &p.duration, &config)
+                        print_and_copy(
+                            p.part.unwrap() as u32,
+                            &progress,
+                            &p.duration,
+                            &config,
+                            prev_line_length,
+                        );
+
+                        if p.part == Some(1) {
+                            prev_line_length = print("Part 2...", 0);
+                        }
                     }
-                    SolveProgress::ErrorResult(p) => {
-                        print_and_copy(p.part.unwrap() as u32, &progress, &p.duration, &config)
-                    }
-                    SolveProgress::Done(p) => println!("Total: {}", fmt_duration(&p.duration)),
-                    SolveProgress::Error(p) => println!("Error: {}", p),
-                    SolveProgress::Progress(p) => println!(
-                        "Progress ({}): {:.2}%",
-                        fmt_duration(&p.duration),
-                        p.value * 100.0
+                    SolveProgress::ErrorResult(p) => print_and_copy(
+                        p.part.unwrap() as u32,
+                        &progress,
+                        &p.duration,
+                        &config,
+                        prev_line_length,
                     ),
+                    SolveProgress::Done(p) => println!("Total: {}", fmt_duration(&p.duration)),
+                    SolveProgress::Error(p) => println!("\nError: {}", p),
+                    SolveProgress::Progress(p) => {
+                        prev_line_length = print(
+                            &format!(
+                                "Part {}... ({}) {:.2}%",
+                                p.part.unwrap(),
+                                fmt_duration(&p.duration),
+                                p.value * 100.0
+                            ),
+                            prev_line_length,
+                        );
+                    }
                 }
             }
         }

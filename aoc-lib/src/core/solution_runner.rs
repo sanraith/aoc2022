@@ -4,6 +4,7 @@ use crate::{inputs, solutions};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -96,11 +97,13 @@ pub fn run_solution<T: SyncStream + 'static>(day: YearDay, input: Input, tx: Arc
         },
         Input::Custom(input) => input,
     };
+    let current_part = Rc::new(RefCell::new(0));
     let ctx = Context {
         raw_input,
         progress_handler: RefCell::new(Box::new(SendOnProgress::new_with_fps(
-            20.0,
+            20.1,
             Arc::clone(&tx),
+            Rc::clone(&current_part),
         ))),
     };
     let mut solution = match solutions::create_map().get(&day) {
@@ -122,10 +125,10 @@ pub fn run_solution<T: SyncStream + 'static>(day: YearDay, input: Input, tx: Arc
             SolveProgress::Error(format!("Unable to initialize solution: {}", err).to_owned()),
         );
     }
-    if let Err(_) = solve_part(&mut solution, 1, start, &ctx, &tx) {
+    if let Err(_) = solve_part(&mut solution, 1, start, &ctx, &tx, &current_part) {
         return;
     }
-    if let Err(_) = solve_part(&mut solution, 2, start, &ctx, &tx) {
+    if let Err(_) = solve_part(&mut solution, 2, start, &ctx, &tx, &current_part) {
         return;
     }
 
@@ -153,8 +156,10 @@ fn solve_part<T: SyncStream>(
     global_start: SystemTime,
     ctx: &Context,
     tx: &Arc<Mutex<T>>,
+    current_part: &Rc<RefCell<u8>>,
 ) -> GenericResult<String> {
     let start = SystemTime::now();
+    *current_part.borrow_mut() = part;
     let result = match part {
         1 => solution.part1(ctx),
         2 => solution.part2(ctx),
@@ -192,19 +197,25 @@ pub struct SendOnProgress<T: SyncStream> {
     min_duration_between_updates: Duration,
     start: SystemTime,
     last_update: SystemTime,
+    current_part: Rc<RefCell<u8>>,
 }
 impl<T: SyncStream> SendOnProgress<T> {
-    pub fn new(tx: Arc<Mutex<T>>) -> SendOnProgress<T> {
+    pub fn new(tx: Arc<Mutex<T>>, current_part: Rc<RefCell<u8>>) -> SendOnProgress<T> {
         SendOnProgress {
             tx,
             min_duration_between_updates: Duration::from_millis(0),
             start: SystemTime::now(),
             last_update: SystemTime::UNIX_EPOCH,
+            current_part,
         }
     }
 
-    pub fn new_with_fps(fps: f32, tx: Arc<Mutex<T>>) -> SendOnProgress<T> {
-        let mut sop = SendOnProgress::new(tx);
+    pub fn new_with_fps(
+        fps: f32,
+        tx: Arc<Mutex<T>>,
+        current_part: Rc<RefCell<u8>>,
+    ) -> SendOnProgress<T> {
+        let mut sop = SendOnProgress::new(tx, current_part);
         sop.min_duration_between_updates = Duration::from_millis((1000.0 / fps.max(0.001)) as u64);
         return sop;
     }
@@ -219,7 +230,7 @@ impl<T: SyncStream> ProgressHandler for SendOnProgress<T> {
                 .lock()
                 .unwrap()
                 .send(SolveProgress::Progress(ResultPack {
-                    part: None,
+                    part: Some(*self.current_part.borrow()),
                     value,
                     duration: self.start.elapsed().unwrap_or_default(),
                 }));
