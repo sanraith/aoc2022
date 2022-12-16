@@ -20,6 +20,16 @@ pub fn re_capture_groups<'a>(re: &Regex, text: &'a str) -> Option<Vec<&'a str>> 
     })
 }
 
+#[cfg(target_arch = "wasm32")]
+pub fn is_wasm() -> bool {
+    true
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn is_wasm() -> bool {
+    false
+}
+
 pub fn post_increment<T: num::Num + Copy>(value: &mut T) -> T {
     let result = *value;
     *value = result + T::one();

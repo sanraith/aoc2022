@@ -17,12 +17,14 @@
         "Keypresses",
         "Pathing",
         "powi",
+        "Proboscidea",
         "rngs",
         "rustup",
         "sanraith",
         "signum",
         "Triggerable",
-        "ureq"
+        "ureq",
+        "Volcanium"
     ],
     "files.exclude": {
         "**/mod.rs": true, // Hide auto-generated modules in explorer

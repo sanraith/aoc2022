@@ -86,6 +86,7 @@ impl Context {
         self.progress_handler.borrow_mut().on_progress(value);
     }
 }
+unsafe impl Sync for Context {}
 
 pub struct SolutionType {
     pub info: SolutionInfo,
