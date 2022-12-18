@@ -24,7 +24,9 @@
         "signum",
         "Triggerable",
         "ureq",
-        "Volcanium"
+        "Volcanium",
+        "voxel",
+        "voxels"
     ],
     "files.exclude": {
         "**/mod.rs": true, // Hide auto-generated modules in explorer
