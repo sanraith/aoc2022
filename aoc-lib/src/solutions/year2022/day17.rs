@@ -73,10 +73,10 @@ fn drop_rocks(_ctx: &Context, cave: &mut Cave, target_drop_count: i64) {
 
         // Jump over repeating patterns
         if (drop_count % ROCK_KINDS.len() as i64) == 0 {
-            let cave_top = cave_top(cave, top_count);
-            if let Some((prev_drop_count, prev_height)) =
-                checkpoints.insert((wind_idx, cave_top.clone()), (drop_count, cave.height()))
-            {
+            if let Some((prev_drop_count, prev_height)) = checkpoints.insert(
+                (wind_idx, cave_top(cave, top_count)),
+                (drop_count, cave.height()),
+            ) {
                 let cycle_size = drop_count - prev_drop_count;
                 let cycles = (target_drop_count - drop_count) / cycle_size;
                 drop_count += cycles * cycle_size;

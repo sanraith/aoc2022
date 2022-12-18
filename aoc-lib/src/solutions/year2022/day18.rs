@@ -72,7 +72,7 @@ fn exterior_surface_area(voxels: &Vec<Point3>) -> i32 {
             }
 
             if lava_droplet.contains(&neighbor) {
-                area += 1
+                area += 1;
             } else if !visited.contains(&neighbor) {
                 queue.push_back(neighbor);
                 visited.insert(neighbor);
