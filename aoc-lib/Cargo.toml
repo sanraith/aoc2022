@@ -8,6 +8,7 @@ name = "aoc"
 crate-type = ["lib"]
 
 [dependencies]
+advent-of-code-ocr = "0.1.1"
 derive_more = { version = "0.99.17", default-features = false, features = [
     "add",
     "add_assign",

@@ -171,6 +171,7 @@ fn run_solution_internal(config: &Config, day_type: &SolutionType) -> GenericRes
                             prev_line_length,
                         );
                     }
+                    SolveProgress::Start(..) => (),
                 }
             }
         }

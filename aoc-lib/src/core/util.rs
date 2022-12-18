@@ -5,7 +5,9 @@ use std::{
     time::Duration,
 };
 
-#[derive(Eq, PartialEq, Hash, Default, Ord, PartialOrd, Serialize, Deserialize, Copy, Clone)]
+#[derive(
+    Eq, PartialEq, Hash, Default, Ord, PartialOrd, Serialize, Deserialize, Copy, Clone, Debug,
+)]
 pub struct YearDay {
     pub year: i32,
     pub day: u32,
@@ -25,7 +27,7 @@ pub fn fmt_duration(d: &Duration) -> String {
         (60_000_000, "min", 2),
         (1_000_000, "s", 3),
         (1_000, "ms", 2),
-        (1, "µs", 0),
+        (1, "us", 0),
     ];
     let micros = d.as_micros() as f64;
     for (scale, suffix, digits) in scales {
@@ -36,7 +38,7 @@ pub fn fmt_duration(d: &Duration) -> String {
         }
     }
 
-    return "0 µs".to_owned();
+    return "0 ms".to_owned();
 }
 
 pub type DynError = Box<dyn std::error::Error>;

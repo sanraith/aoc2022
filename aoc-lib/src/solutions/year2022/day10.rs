@@ -1,10 +1,11 @@
 use crate::{solution::*, util::GenericResult};
+use advent_of_code_ocr as ocr;
 use itertools::Itertools;
 
 const WIDTH: i32 = 40;
 const HEIGHT: i32 = 6;
-const PIXEL_ON: char = '█';
-const PIXEL_OFF: char = ' ';
+const PIXEL_ON: char = '#';
+const PIXEL_OFF: char = '.';
 
 #[derive(Default)]
 pub struct Day10;
@@ -20,12 +21,16 @@ impl Solution for Day10 {
 
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
         let (_, screen) = execute_program(ctx)?;
-        let screen = screen
+        let screen_str = screen
             .chunks(WIDTH as usize)
             .map(|x| x.iter().join(""))
             .join("\n");
+        let letters = ocr::parse_string_to_letters(&screen_str);
 
-        Ok(screen)
+        match letters.len() {
+            8 => Ok(letters),
+            _ => Ok(screen_str),
+        }
     }
 }
 

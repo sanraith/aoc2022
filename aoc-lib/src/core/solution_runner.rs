@@ -12,6 +12,7 @@ use wasm_timer::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResultPack<T> {
+    pub year_day: YearDay,
     pub part: Option<u8>,
     pub value: T,
     pub duration: Duration,
@@ -19,6 +20,7 @@ pub struct ResultPack<T> {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum SolveProgress {
+    Start(YearDay, String),
     Error(String),
     Progress(ResultPack<f32>),
     SuccessResult(ResultPack<String>),
@@ -73,23 +75,29 @@ pub trait SolutionRunner<T: SyncStream> {
 }
 pub struct ThreadSolutionRunner {}
 impl SolutionRunner<LocalSyncStream> for ThreadSolutionRunner {
-    fn run(&self, day: YearDay, input: Input) -> Arc<Mutex<LocalSyncStream>> {
+    fn run(&self, year_day: YearDay, input: Input) -> Arc<Mutex<LocalSyncStream>> {
         let stream = Arc::new(Mutex::new(LocalSyncStream::new()));
         let stream_copy = Arc::clone(&stream);
-        thread::spawn(move || run_solution(day, input, stream_copy));
+        thread::spawn(move || run_solution(year_day, input, stream_copy, 20.1));
 
         stream
     }
 }
 
-pub fn run_solution<T: SyncStream + 'static>(day: YearDay, input: Input, tx: Arc<Mutex<T>>) {
+pub fn run_solution<T: SyncStream + 'static>(
+    year_day: YearDay,
+    input: Input,
+    tx: Arc<Mutex<T>>,
+    fps: f32,
+) {
     let start = SystemTime::now();
     let raw_input = match input {
-        Input::Default => match inputs::get(&day) {
+        Input::Default => match inputs::get(&year_day) {
             Some(input) => input.to_owned(),
             None => {
                 return send_and_close(
                     &tx,
+                    year_day,
                     start,
                     SolveProgress::Error("input not found".to_owned()),
                 );
@@ -101,48 +109,60 @@ pub fn run_solution<T: SyncStream + 'static>(day: YearDay, input: Input, tx: Arc
     let ctx = Context {
         raw_input,
         progress_handler: RefCell::new(Box::new(SendOnProgress::new_with_fps(
-            20.1,
+            fps,
             Arc::clone(&tx),
+            year_day,
             Rc::clone(&current_part),
         ))),
     };
-    let mut solution = match solutions::create_map().get(&day) {
+    let mut solution = match solutions::create_map().get(&year_day) {
         Some(solutions) => solutions[0].create_new(),
         None => {
             return send_and_close(
                 &tx,
+                year_day,
                 start,
                 SolveProgress::Error("solution not found".to_owned()),
             );
         }
     };
 
+    tx.lock()
+        .unwrap()
+        .send(SolveProgress::Start(year_day, solution.info().title));
     let start = SystemTime::now();
     if let Err(err) = solution.init(&ctx) {
         return send_and_close(
             &tx,
+            year_day,
             start,
             SolveProgress::Error(format!("Unable to initialize solution: {}", err).to_owned()),
         );
     }
-    if let Err(_) = solve_part(&mut solution, 1, start, &ctx, &tx, &current_part) {
+    if let Err(_) = solve_part(&mut solution, 1, start, &ctx, &tx, &current_part, year_day) {
         return;
     }
-    if let Err(_) = solve_part(&mut solution, 2, start, &ctx, &tx, &current_part) {
+    if let Err(_) = solve_part(&mut solution, 2, start, &ctx, &tx, &current_part, year_day) {
         return;
     }
 
-    close(&tx, start);
+    close(&tx, year_day, start);
 }
 
-fn send_and_close<T: SyncStream>(tx: &Arc<Mutex<T>>, start: SystemTime, msg: SolveProgress) {
+fn send_and_close<T: SyncStream>(
+    tx: &Arc<Mutex<T>>,
+    day: YearDay,
+    start: SystemTime,
+    msg: SolveProgress,
+) {
     tx.lock().unwrap().send(msg);
-    close(tx, start);
+    close(tx, day, start);
 }
 
-fn close<T: SyncStream>(tx: &Arc<Mutex<T>>, start: SystemTime) {
+fn close<T: SyncStream>(tx: &Arc<Mutex<T>>, day: YearDay, start: SystemTime) {
     let mut tx = tx.lock().unwrap();
     tx.send(SolveProgress::Done(ResultPack {
+        year_day: day,
         part: None,
         value: (),
         duration: start.elapsed().unwrap_or_default(),
@@ -157,6 +177,7 @@ fn solve_part<T: SyncStream>(
     ctx: &Context,
     tx: &Arc<Mutex<T>>,
     current_part: &Rc<RefCell<u8>>,
+    day: YearDay,
 ) -> GenericResult<String> {
     let start = SystemTime::now();
     *current_part.borrow_mut() = part;
@@ -165,13 +186,13 @@ fn solve_part<T: SyncStream>(
         2 => solution.part2(ctx),
         _ => Err("Invalid part!".into()),
     };
-
     let duration = SystemTime::now().duration_since(start).unwrap_or_default();
     match &result {
         Ok(result) => tx
             .lock()
             .unwrap()
             .send(SolveProgress::SuccessResult(ResultPack {
+                year_day: day,
                 part: Some(part),
                 value: result.to_owned(),
                 duration,
@@ -179,8 +200,10 @@ fn solve_part<T: SyncStream>(
         Err(err) => {
             send_and_close(
                 &tx,
+                day,
                 global_start,
                 SolveProgress::ErrorResult(ResultPack {
+                    year_day: day,
                     part: Some(part),
                     value: err.to_string(),
                     duration,
@@ -198,11 +221,17 @@ pub struct SendOnProgress<T: SyncStream> {
     start: SystemTime,
     last_update: SystemTime,
     current_part: Rc<RefCell<u8>>,
+    day: YearDay,
 }
 impl<T: SyncStream> SendOnProgress<T> {
-    pub fn new(tx: Arc<Mutex<T>>, current_part: Rc<RefCell<u8>>) -> SendOnProgress<T> {
+    pub fn new(
+        tx: Arc<Mutex<T>>,
+        day: YearDay,
+        current_part: Rc<RefCell<u8>>,
+    ) -> SendOnProgress<T> {
         SendOnProgress {
             tx,
+            day,
             min_duration_between_updates: Duration::from_millis(0),
             start: SystemTime::now(),
             last_update: SystemTime::UNIX_EPOCH,
@@ -213,9 +242,10 @@ impl<T: SyncStream> SendOnProgress<T> {
     pub fn new_with_fps(
         fps: f32,
         tx: Arc<Mutex<T>>,
+        day: YearDay,
         current_part: Rc<RefCell<u8>>,
     ) -> SendOnProgress<T> {
-        let mut sop = SendOnProgress::new(tx, current_part);
+        let mut sop = SendOnProgress::new(tx, day, current_part);
         sop.min_duration_between_updates = Duration::from_millis((1000.0 / fps.max(0.001)) as u64);
         return sop;
     }
@@ -230,9 +260,12 @@ impl<T: SyncStream> ProgressHandler for SendOnProgress<T> {
                 .lock()
                 .unwrap()
                 .send(SolveProgress::Progress(ResultPack {
+                    year_day: self.day,
                     part: Some(*self.current_part.borrow()),
                     value,
-                    duration: self.start.elapsed().unwrap_or_default(),
+                    duration: SystemTime::now()
+                        .duration_since(self.start)
+                        .unwrap_or_default(),
                 }));
             self.last_update = SystemTime::now();
         }
