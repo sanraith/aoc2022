@@ -1,7 +1,12 @@
-use crate::{helpers::re_capture_groups, solution::*, util::GenericResult};
+use crate::{
+    helpers::{is_wasm, re_capture_groups},
+    solution::*,
+    util::GenericResult,
+};
 use itertools::Itertools;
+use rayon::prelude::*;
 use regex::Regex;
-use std::{collections::HashSet, hash::Hash};
+use std::{collections::HashMap, hash::Hash, sync::Mutex};
 
 static GEO_IDX: usize = 3;
 
@@ -19,7 +24,7 @@ impl Solution for Day19 {
             .enumerate()
             .map(|(index, bp)| {
                 ctx.progress(index as f32 / blueprints.len() as f32);
-                (bp.id, start_find_best_rec(bp, 24))
+                (bp.id, find_best(bp, 24))
             })
             .collect_vec();
 
@@ -29,45 +34,45 @@ impl Solution for Day19 {
 
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
         let blueprints = parse_blueprints(ctx)?.into_iter().take(3).collect_vec();
-        let results = blueprints
-            .iter()
-            .enumerate()
-            .map(|(index, bp)| {
-                ctx.progress(index as f32 / blueprints.len() as f32);
-                // find_best(bp, 32, ctx, index, blueprints.len())
-                start_find_best_rec(bp, 32)
-            })
-            .collect_vec();
-        println!("{:?}", results);
+        let results = if is_wasm() {
+            blueprints
+                .iter()
+                .enumerate()
+                .map(|(index, bp)| {
+                    ctx.progress(index as f32 / blueprints.len() as f32);
+                    find_best(bp, 32)
+                })
+                .collect_vec()
+        } else {
+            let progress = Mutex::new(0);
+            blueprints
+                .par_iter()
+                .map(|bp| {
+                    let result = find_best(bp, 32);
+                    {
+                        let mut progress = progress.lock().unwrap();
+                        *progress += 1;
+                        ctx.progress(*progress as f32 / blueprints.len() as f32);
+                    }
+
+                    result
+                })
+                .collect::<Vec<_>>()
+        };
 
         let product = results.iter().fold(1, |a, x| a * x);
-        Ok(product.to_string()) // 31 not good
+        Ok(product.to_string())
     }
 }
 
-fn hash_state(robots: &Vec<i64>, ores: &Vec<i64>) -> u128 {
-    let mut hash: u128 = 0;
-    // robots.iter().for_each(|c| hash = hash * 32 + *c as u128);
-    // ores.iter().for_each(|c| hash = hash * 128 + *c as u128);
-    robots.iter().for_each(|c| {
-        hash = hash
-            .checked_mul(32)
-            .unwrap()
-            .checked_add(*c as u128)
-            .unwrap()
-    });
-    ores.iter().for_each(|c| {
-        hash = hash
-            .checked_mul(128)
-            .unwrap()
-            .checked_add(*c as u128)
-            .unwrap()
-    });
-
+fn hash_state(remaining_time: i64, robots: &Vec<i64>, ores: &Vec<i64>) -> u128 {
+    let mut hash: u128 = remaining_time as u128;
+    robots.iter().for_each(|c| hash = hash * 32 + *c as u128);
+    ores.iter().for_each(|c| hash = hash * 128 + *c as u128);
     hash
 }
 
-fn start_find_best_rec(bp: &Blueprint, remaining_time: i64) -> i64 {
+fn find_best(bp: &Blueprint, remaining_time: i64) -> i64 {
     let max_robot_counts = (0..3)
         .map(|ore_i| bp.costs.iter().fold(0, |a, costs| a.max(costs[ore_i])))
         .chain([i64::MAX])
@@ -78,7 +83,7 @@ fn start_find_best_rec(bp: &Blueprint, remaining_time: i64) -> i64 {
         remaining_time,
         &mut vec![0, 0, 0, 0],
         &mut vec![1, 0, 0, 0],
-        &mut HashSet::new(),
+        &mut HashMap::new(),
         &max_robot_counts,
     )
 }
@@ -88,7 +93,7 @@ fn find_best_rec(
     remaining_time: i64,
     ores: &mut Vec<i64>,
     robots: &mut Vec<i64>,
-    visited: &mut HashSet<u128>,
+    visited: &mut HashMap<u128, i64>,
     max_robot_counts: &Vec<i64>,
 ) -> i64 {
     let mut possible_robots = Vec::new();
@@ -113,47 +118,54 @@ fn find_best_rec(
     }
 
     let mut max_geo = ores[GEO_IDX];
-    if remaining_time > 0 {
+    if remaining_time > 1 {
         // make robots
         for (robot_type, resources) in possible_robots.iter().map(|&t| (t, bp.costs[t])) {
             resources.iter().enumerate().for_each(|(i, c)| ores[i] -= c);
             robots[robot_type] += 1;
 
-            let hash = hash_state(robots, ores);
-            if visited.insert(hash) {
-                let count = find_best_rec(
-                    bp,
-                    remaining_time - 1,
-                    ores,
-                    robots,
-                    visited,
-                    max_robot_counts,
-                );
-                max_geo = max_geo.max(count);
+            let hash = hash_state(remaining_time, robots, ores);
+            match visited.get(&hash) {
+                Some(&prev_time) if remaining_time <= prev_time => (),
+                _ => {
+                    visited.insert(hash, remaining_time);
+                    max_geo = max_geo.max(find_best_rec(
+                        bp,
+                        remaining_time - 1,
+                        ores,
+                        robots,
+                        visited,
+                        max_robot_counts,
+                    ));
+                }
             }
 
-            robots[robot_type] -= 1;
+            // clean up since we are re-using vectors
             resources.iter().enumerate().for_each(|(i, c)| ores[i] += c);
+            robots[robot_type] -= 1;
         }
 
         // or pass time
         if !made_geo_robot {
-            let hash = hash_state(robots, ores);
-            if visited.insert(hash) {
-                let count = find_best_rec(
-                    bp,
-                    remaining_time - 1,
-                    ores,
-                    robots,
-                    visited,
-                    max_robot_counts,
-                );
-                max_geo = max_geo.max(count);
+            let hash = hash_state(remaining_time, robots, ores);
+            match visited.get(&hash) {
+                Some(&prev_time) if remaining_time <= prev_time => (),
+                _ => {
+                    visited.insert(hash, remaining_time);
+                    max_geo = max_geo.max(find_best_rec(
+                        bp,
+                        remaining_time - 1,
+                        ores,
+                        robots,
+                        visited,
+                        max_robot_counts,
+                    ));
+                }
             }
         }
     }
 
-    // clean up since we are using the same vectors
+    // clean up since we are re-using vectors
     for (robot_type, count) in robots.iter().enumerate() {
         ores[robot_type] -= count;
     }
