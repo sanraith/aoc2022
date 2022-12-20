@@ -10,12 +10,12 @@ Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsid
 Blueprint 2: Each ore robot costs 2 ore. Each clay robot costs 3 ore. Each obsidian robot costs 3 ore and 8 clay. Each geode robot costs 3 ore and 12 obsidian."#,
     );
     assert_result(day.part1(&ctx), "33", "solve part 1");
-    //assert_result(day.part2(&ctx), "day19_part2", "solve part 2");
+    assert_result(day.part2(&ctx), "4216", "solve part 2");
 }
 
 #[test]
 fn puzzle_input() {
     let (mut day, ctx) = setup_from_file::<Day19>();
     assert_result(day.part1(&ctx), "817", "solve part 1");
-    //assert_result(day.part2(&ctx), "day19_part2", "solve part 2");
+    assert_result(day.part2(&ctx), "62", "solve part 2");
 }

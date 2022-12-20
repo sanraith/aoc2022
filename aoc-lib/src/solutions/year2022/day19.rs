@@ -23,17 +23,27 @@ impl Solution for Day19 {
             .enumerate()
             .map(|(index, bp)| {
                 ctx.progress(index as f32 / blueprints.len() as f32);
-                (bp.id, find_best(bp, ctx))
+                (bp.id, find_best(bp, 24, ctx, index, blueprints.len()))
             })
             .collect_vec();
-        println!("{:?}", results);
 
         let quality_level_sum = results.iter().fold(0, |a, (id, geo)| a + id * geo);
         Ok(quality_level_sum.to_string())
     }
 
-    fn part2(&mut self, _ctx: &Context) -> SolutionResult {
-        Err(NotImplementedError)?
+    fn part2(&mut self, ctx: &Context) -> SolutionResult {
+        let blueprints = parse_blueprints(ctx)?.into_iter().take(3).collect_vec();
+        let results = blueprints
+            .iter()
+            .enumerate()
+            .map(|(index, bp)| {
+                ctx.progress(index as f32 / blueprints.len() as f32);
+                find_best(bp, 32, ctx, index, blueprints.len())
+            })
+            .collect_vec();
+
+        let product = results.iter().fold(1, |a, x| a * x);
+        Ok(product.to_string()) // 31 not good
     }
 }
 
@@ -56,8 +66,23 @@ impl State {
     }
 }
 
-fn find_best(bp: &Blueprint, _ctx: &Context) -> i64 {
-    let (initial_state, initial_hash) = State::new(24, vec![1, 0, 0, 0], vec![0, 0, 0, 0]).hashed();
+fn get_max_potential(mut robot_count: i64, mut geo_count: i64, remaining_time: i64) -> i64 {
+    for _ in 0..remaining_time {
+        geo_count += robot_count;
+        robot_count += 1;
+    }
+    geo_count
+}
+
+fn find_best(
+    bp: &Blueprint,
+    available_time: i64,
+    ctx: &Context,
+    bp_idx: usize,
+    bp_count: usize,
+) -> i64 {
+    let (initial_state, initial_hash) =
+        State::new(available_time, vec![1, 0, 0, 0], vec![0, 0, 0, 0]).hashed();
     let mut visited = HashSet::from([initial_hash]);
     let mut queue = VecDeque::from([initial_state]);
     let max_robot_counts = (0..3)
@@ -67,19 +92,21 @@ fn find_best(bp: &Blueprint, _ctx: &Context) -> i64 {
 
     let mut max = 0;
     let mut min_time = i64::MAX;
+
     while let Some(state) = queue.pop_front() {
         if state.remaining_time < min_time {
             min_time = state.remaining_time;
-            // println!("Minute: {}", 25 - min_time);
+
+            ctx.progress(
+                bp_idx as f32 / bp_count as f32
+                    + (1.0 / bp_count as f32) * (available_time - state.remaining_time) as f32
+                        / available_time as f32,
+            )
         }
 
         let current_geo = state.ores[GEO_IDX];
         if current_geo > max {
             max = state.ores[GEO_IDX];
-            // println!(
-            //     "geo: {}, ores: {:?}, robots: {:?}",
-            //     max, state.ores, state.robots
-            // );
         }
 
         if state.remaining_time == 0 {
@@ -113,8 +140,6 @@ fn find_best(bp: &Blueprint, _ctx: &Context) -> i64 {
                     if robot_idx == GEO_IDX {
                         made_geo_robot = true;
                     }
-                } else {
-                    // println!("dupl");
                 }
             }
         }
@@ -123,90 +148,11 @@ fn find_best(bp: &Blueprint, _ctx: &Context) -> i64 {
             let (next_state, hash) = next_state.hashed();
             if visited.insert(hash) {
                 queue.push_back(next_state);
-            } else {
-                // println!("dupl2");
             }
         }
     }
 
     max
-}
-
-// we want to build geode robots
-// a, wait around if we got enough robots
-// NEED D --------------------> NEED A
-//      |--> NEED C ------------^^
-//                |--> NEED B ---|
-fn bfs_next_geo_robot(
-    bp: &Blueprint,
-    remaining_time: i64,
-    robots: &Vec<i64>,
-    ores: &Vec<i64>,
-    cache: &mut HashMap<u128, Option<usize>>,
-) -> Option<usize> {
-    let hash = hash_robots_ores(robots, ores);
-    if let Some(hit) = cache.get(&hash) {
-        return hit.to_owned();
-    }
-
-    let initial_state = State::new(remaining_time, robots.clone(), ores.clone());
-    let mut queue = VecDeque::from([(vec![], initial_state)]);
-    let mut shortest_path = Vec::new();
-    'bfs: while let Some((path, state)) = queue.pop_front() {
-        if state.remaining_time == 0 {
-            continue;
-        }
-
-        let mut next_state = state.clone();
-        next_state.remaining_time -= 1;
-        for (robot_idx, robot_count) in state.robots.iter().enumerate() {
-            next_state.ores[robot_idx] += robot_count;
-        }
-
-        for robot_idx in 0..bp.costs.len() {
-            let can_make_robot = bp.costs[robot_idx]
-                .iter()
-                .enumerate()
-                .all(|(i, &c)| state.ores[i] >= c);
-            if can_make_robot {
-                if robot_idx == GEO_IDX {
-                    shortest_path = path;
-                    shortest_path.push(Some(robot_idx));
-                    break 'bfs; // TODO might be more paths...
-                }
-
-                let mut next_path = path.clone();
-                next_path.push(Some(robot_idx));
-
-                let mut next_state = next_state.clone();
-                next_state.robots[robot_idx] += 1;
-                bp.costs[robot_idx]
-                    .iter()
-                    .enumerate()
-                    .for_each(|(i, &c)| next_state.ores[i] -= c);
-
-                queue.push_back((next_path, next_state));
-            }
-        }
-
-        // wait around
-        let mut next_path = path.clone();
-        next_path.push(None);
-        queue.push_back((next_path, next_state));
-    }
-
-    println!("{:?}", shortest_path);
-    let result = shortest_path.into_iter().next().unwrap_or(None);
-    cache.insert(hash, result.clone());
-
-    result
-}
-
-fn hash_robots_ores(robots: &Vec<i64>, ores: &Vec<i64>) -> u128 {
-    let mut hash = 0;
-    robots.iter().for_each(|c| hash = hash * 32 + *c as u128);
-    ores.iter().for_each(|c| hash = hash * 128 + *c as u128);
-    hash
 }
 
 fn parse_blueprints(ctx: &Context) -> GenericResult<Vec<Blueprint>> {
