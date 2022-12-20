@@ -19,3 +19,4 @@ pub mod day15_test;
 pub mod day16_test;
 pub mod day17_test;
 pub mod day18_test;
+pub mod day20_test;
