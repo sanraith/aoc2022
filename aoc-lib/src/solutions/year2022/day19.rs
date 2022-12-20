@@ -1,11 +1,7 @@
 use crate::{helpers::re_capture_groups, solution::*, util::GenericResult};
-use derive_more::Constructor;
 use itertools::Itertools;
 use regex::Regex;
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    hash::Hash,
-};
+use std::{collections::HashSet, hash::Hash};
 
 static GEO_IDX: usize = 3;
 
@@ -23,7 +19,7 @@ impl Solution for Day19 {
             .enumerate()
             .map(|(index, bp)| {
                 ctx.progress(index as f32 / blueprints.len() as f32);
-                (bp.id, find_best(bp, 24, ctx, index, blueprints.len()))
+                (bp.id, start_find_best_rec(bp, 24))
             })
             .collect_vec();
 
@@ -38,121 +34,131 @@ impl Solution for Day19 {
             .enumerate()
             .map(|(index, bp)| {
                 ctx.progress(index as f32 / blueprints.len() as f32);
-                find_best(bp, 32, ctx, index, blueprints.len())
+                // find_best(bp, 32, ctx, index, blueprints.len())
+                start_find_best_rec(bp, 32)
             })
             .collect_vec();
+        println!("{:?}", results);
 
         let product = results.iter().fold(1, |a, x| a * x);
         Ok(product.to_string()) // 31 not good
     }
 }
 
-#[derive(Clone, Constructor)]
-struct State {
-    remaining_time: i64,
-    robots: Vec<i64>,
-    ores: Vec<i64>,
-}
-impl State {
-    fn hashed(self) -> (State, u128) {
-        let mut hash = 0;
-        self.robots
-            .iter()
-            .for_each(|c| hash = hash * 32 + *c as u128);
-        self.ores
-            .iter()
-            .for_each(|c| hash = hash * 128 + *c as u128);
-        (self, hash)
-    }
+fn hash_state(robots: &Vec<i64>, ores: &Vec<i64>) -> u128 {
+    let mut hash: u128 = 0;
+    // robots.iter().for_each(|c| hash = hash * 32 + *c as u128);
+    // ores.iter().for_each(|c| hash = hash * 128 + *c as u128);
+    robots.iter().for_each(|c| {
+        hash = hash
+            .checked_mul(32)
+            .unwrap()
+            .checked_add(*c as u128)
+            .unwrap()
+    });
+    ores.iter().for_each(|c| {
+        hash = hash
+            .checked_mul(128)
+            .unwrap()
+            .checked_add(*c as u128)
+            .unwrap()
+    });
+
+    hash
 }
 
-fn get_max_potential(mut robot_count: i64, mut geo_count: i64, remaining_time: i64) -> i64 {
-    for _ in 0..remaining_time {
-        geo_count += robot_count;
-        robot_count += 1;
-    }
-    geo_count
-}
-
-fn find_best(
-    bp: &Blueprint,
-    available_time: i64,
-    ctx: &Context,
-    bp_idx: usize,
-    bp_count: usize,
-) -> i64 {
-    let (initial_state, initial_hash) =
-        State::new(available_time, vec![1, 0, 0, 0], vec![0, 0, 0, 0]).hashed();
-    let mut visited = HashSet::from([initial_hash]);
-    let mut queue = VecDeque::from([initial_state]);
+fn start_find_best_rec(bp: &Blueprint, remaining_time: i64) -> i64 {
     let max_robot_counts = (0..3)
         .map(|ore_i| bp.costs.iter().fold(0, |a, costs| a.max(costs[ore_i])))
         .chain([i64::MAX])
         .collect_vec();
 
-    let mut max = 0;
-    let mut min_time = i64::MAX;
+    find_best_rec(
+        bp,
+        remaining_time,
+        &mut vec![0, 0, 0, 0],
+        &mut vec![1, 0, 0, 0],
+        &mut HashSet::new(),
+        &max_robot_counts,
+    )
+}
 
-    while let Some(state) = queue.pop_front() {
-        if state.remaining_time < min_time {
-            min_time = state.remaining_time;
+fn find_best_rec(
+    bp: &Blueprint,
+    remaining_time: i64,
+    ores: &mut Vec<i64>,
+    robots: &mut Vec<i64>,
+    visited: &mut HashSet<u128>,
+    max_robot_counts: &Vec<i64>,
+) -> i64 {
+    let mut possible_robots = Vec::new();
+    let mut made_geo_robot = false;
+    if remaining_time > 1 {
+        for (robot_idx, resources) in bp.costs.iter().enumerate().rev() {
+            let can_make_robot = robots[robot_idx] < max_robot_counts[robot_idx]
+                && resources.iter().enumerate().all(|(i, &c)| ores[i] >= c);
 
-            ctx.progress(
-                bp_idx as f32 / bp_count as f32
-                    + (1.0 / bp_count as f32) * (available_time - state.remaining_time) as f32
-                        / available_time as f32,
-            )
-        }
-
-        let current_geo = state.ores[GEO_IDX];
-        if current_geo > max {
-            max = state.ores[GEO_IDX];
-        }
-
-        if state.remaining_time == 0 {
-            continue;
-        }
-
-        let mut next_state = state.clone();
-        next_state.remaining_time -= 1;
-        for (robot_idx, robot_count) in state.robots.iter().enumerate() {
-            next_state.ores[robot_idx] += robot_count;
-        }
-
-        let mut made_geo_robot = false;
-        for robot_idx in (0..bp.costs.len()).rev() {
-            let can_make_robot = state.robots[robot_idx] < max_robot_counts[robot_idx]
-                && bp.costs[robot_idx]
-                    .iter()
-                    .enumerate()
-                    .all(|(i, &c)| state.ores[i] >= c);
             if can_make_robot {
-                let mut next_state = next_state.clone();
-                next_state.robots[robot_idx] += 1;
-                bp.costs[robot_idx]
-                    .iter()
-                    .enumerate()
-                    .for_each(|(i, &c)| next_state.ores[i] -= c);
-
-                let (next_state, hash) = next_state.hashed();
-                if visited.insert(hash) {
-                    queue.push_back(next_state);
-                    if robot_idx == GEO_IDX {
-                        made_geo_robot = true;
-                    }
+                possible_robots.push(robot_idx);
+                if robot_idx == GEO_IDX {
+                    made_geo_robot = true;
                 }
-            }
-        }
-
-        if !made_geo_robot {
-            let (next_state, hash) = next_state.hashed();
-            if visited.insert(hash) {
-                queue.push_back(next_state);
             }
         }
     }
 
-    max
+    // produce ores
+    for (robot_type, count) in robots.iter().enumerate() {
+        ores[robot_type] += count;
+    }
+
+    let mut max_geo = ores[GEO_IDX];
+    if remaining_time > 0 {
+        // make robots
+        for (robot_type, resources) in possible_robots.iter().map(|&t| (t, bp.costs[t])) {
+            resources.iter().enumerate().for_each(|(i, c)| ores[i] -= c);
+            robots[robot_type] += 1;
+
+            let hash = hash_state(robots, ores);
+            if visited.insert(hash) {
+                let count = find_best_rec(
+                    bp,
+                    remaining_time - 1,
+                    ores,
+                    robots,
+                    visited,
+                    max_robot_counts,
+                );
+                max_geo = max_geo.max(count);
+            }
+
+            robots[robot_type] -= 1;
+            resources.iter().enumerate().for_each(|(i, c)| ores[i] += c);
+        }
+
+        // or pass time
+        if !made_geo_robot {
+            let hash = hash_state(robots, ores);
+            if visited.insert(hash) {
+                let count = find_best_rec(
+                    bp,
+                    remaining_time - 1,
+                    ores,
+                    robots,
+                    visited,
+                    max_robot_counts,
+                );
+                max_geo = max_geo.max(count);
+            }
+        }
+    }
+
+    // clean up since we are using the same vectors
+    for (robot_type, count) in robots.iter().enumerate() {
+        ores[robot_type] -= count;
+    }
+
+    return max_geo;
 }
 
 fn parse_blueprints(ctx: &Context) -> GenericResult<Vec<Blueprint>> {
