@@ -38,10 +38,7 @@
                     "kind": "bin"
                 }
             },
-            "args": [
-                "solve",
-                "19"
-            ],
+            "args": [],
             "cwd": "${workspaceFolder}"
         },
         {

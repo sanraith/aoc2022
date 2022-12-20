@@ -85,7 +85,16 @@ fn find_best(bp: &Blueprint, remaining_time: i64) -> i64 {
         &mut vec![1, 0, 0, 0],
         &mut HashMap::new(),
         &max_robot_counts,
+        0,
     )
+}
+
+fn get_max_potential_geo(mut robot_count: i64, mut geo_count: i64, remaining_time: i64) -> i64 {
+    for _ in 0..remaining_time {
+        geo_count += robot_count;
+        robot_count += 1;
+    }
+    geo_count
 }
 
 fn find_best_rec(
@@ -95,7 +104,13 @@ fn find_best_rec(
     robots: &mut Vec<i64>,
     visited: &mut HashMap<u128, i64>,
     max_robot_counts: &Vec<i64>,
+    max_geo: i64,
 ) -> i64 {
+    let max_potential_geo = get_max_potential_geo(robots[GEO_IDX], ores[GEO_IDX], remaining_time);
+    if max_potential_geo <= max_geo {
+        return max_geo;
+    }
+
     let mut possible_robots = Vec::new();
     let mut made_geo_robot = false;
     if remaining_time > 1 {
@@ -136,6 +151,7 @@ fn find_best_rec(
                         robots,
                         visited,
                         max_robot_counts,
+                        max_geo,
                     ));
                 }
             }
@@ -159,6 +175,7 @@ fn find_best_rec(
                         robots,
                         visited,
                         max_robot_counts,
+                        max_geo,
                     ));
                 }
             }
