@@ -5,7 +5,7 @@ use num::integer::Roots;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
     ops::{Range, RangeInclusive},
 };
@@ -21,7 +21,7 @@ static DIRECTIONS: [Point; 4] = [
 ];
 
 // side => [(neighbor_side, neighbor_side_rotation); 4] in the order of [R, D, L, U]
-static DIE: Lazy<HashMap<usize, [(usize, usize); 4]>> = Lazy::new(|| {
+static DICE: Lazy<HashMap<usize, [(usize, usize); 4]>> = Lazy::new(|| {
     HashMap::from([
         (1, [(3, 3), (5, 0), (4, 1), (2, 2)]),
         (2, [(4, 0), (6, 2), (3, 0), (1, 2)]),
@@ -59,13 +59,15 @@ impl Solution for Day22 {
 fn walk(map: &Map) -> GenericResult<(Point, usize)> {
     let mut pos = map.start.clone();
     let mut facing = 0;
+    let mut visited = HashMap::new();
     for (facing_next, distance) in &map.path {
-        facing = *facing_next;
+        facing = (facing + *facing_next) % 4;
         for _ in 0..*distance {
             let (next_pos, facing_change) = get_next_pos(pos, facing, map)?;
             match map.tiles.get(&next_pos) {
                 Some(&c) if c == TILE_WALL => break,
                 Some(_) => {
+                    visited.insert(pos, facing);
                     pos = next_pos;
                     facing = (facing as i32 + facing_change + 4) as usize % 4;
                 }
@@ -73,6 +75,9 @@ fn walk(map: &Map) -> GenericResult<(Point, usize)> {
             }
         }
     }
+    visited.insert(pos, facing);
+
+    print_map(map, &visited);
 
     Ok((pos, facing))
 }
@@ -86,6 +91,29 @@ fn get_next_pos(start: Point, facing: usize, map: &Map) -> GenericResult<(Point,
     };
 
     Ok((next_pos, facing_change))
+}
+
+fn print_map(map: &Map, visited: &HashMap<Point, usize>) {
+    println!("\nmap:");
+    for y in 0..map.height {
+        for x in 0..map.width {
+            let p = Point::new(x, y);
+            if let Some(facing) = visited.get(&p) {
+                match facing {
+                    0 => print!(">"),
+                    1 => print!("v"),
+                    2 => print!("<"),
+                    _ => print!("^"),
+                }
+            } else {
+                match map.tiles.get(&p) {
+                    Some(c) => print!("{}", c),
+                    None => print!(" "),
+                }
+            }
+        }
+        println!();
+    }
 }
 
 fn parse_input(ctx: &Context, mode: WrapMode) -> GenericResult<Map> {
@@ -135,8 +163,8 @@ fn parse_input(ctx: &Context, mode: WrapMode) -> GenericResult<Map> {
 
         let turn = captures.get(2).and_then(|x| x.as_str().chars().next());
         match turn {
-            Some(c) if c == 'R' => facing = (facing + 1) % 4,
-            Some(c) if c == 'L' => facing = (facing + 3) % 4,
+            Some(c) if c == 'R' => facing = 1,
+            Some(c) if c == 'L' => facing = 3,
             Some(_) => Err("invalid path")?,
             None => (),
         }
@@ -194,7 +222,7 @@ fn add_cube_portals(map: &mut Map) -> GenericResult {
     let mut side_map = HashMap::from([(*start, (1, 0))]);
     let mut side_rotation_map: HashMap<(usize, usize), i32> = HashMap::new();
     while let Some((pos, (side, rot))) = queue.pop_front() {
-        let neighbors = DIE.get(&side).ok_or("invalid dice")?;
+        let neighbors = DICE.get(&side).ok_or("invalid dice")?;
         for (dir_idx, (next_side, next_rot)) in neighbors.iter().enumerate() {
             let next_pos = pos + DIRECTIONS[(dir_idx + rot) % 4];
             if sides.contains(&next_pos) && !side_map.contains_key(&next_pos) {
@@ -211,83 +239,29 @@ fn add_cube_portals(map: &mut Map) -> GenericResult {
         if side_rotation_map.contains_key(&(a, b)) {
             continue; // already covered
         }
-        if !DIE.get(&a).ok_or("err")?.iter().all(|(side, _)| *side != b) {
+        if DICE
+            .get(&a)
+            .ok_or("err")?
+            .iter()
+            .all(|(side, _)| *side != b)
+        {
             continue; // not neighbors
         }
-        side_rotation_map.insert((a, b), -1 /*???????*/); // figure it out somehow...
-    }
 
-    // generate portals based on relative rotations
-    for (pos_a, (side_a, rot)) in side_map.iter().collect_vec() {
-        for (dir_idx, (side_b, _)) in DIE.get(&side_a).ok_or("err")?.iter().enumerate() {
-            let pos_b = side_map
-                .iter()
-                .find(|(k, (s, _))| s == side_b)
-                .map(|(k, _)| k)
-                .ok_or("err")?;
+        // println!("{} {}", a, b);
+        let pos_a = side_map
+            .iter()
+            .find(|(_, (s, _))| *s == a)
+            .map(|(k, _)| k)
+            .ok_or("err")?;
+        let pos_b = side_map
+            .iter()
+            .find(|(_, (s, _))| *s == b)
+            .map(|(k, _)| k)
+            .ok_or("err")?;
 
-            let edge_from = dir_idx;
-            let edge_to = (dir_idx + 2 + rot) % 4;
-
-            let points_a = edge_ranges(map, &pos_a, edge_from)?;
-            let points_a =
-                itertools::iproduct!(points_a.0, points_a.1).map(|(x, y)| Point::new(x, y));
-            let points_b = edge_ranges(map, &pos_b, edge_to)?;
-            let mut points_b = itertools::iproduct!(points_b.0, points_b.1)
-                .map(|(x, y)| Point::new(x, y))
-                .collect_vec();
-
-            match rot {
-                0 | 3 => (),
-                1 | 2 => points_b.reverse(),
-                _ => Err("invalid rotation")?,
-            }
-
-            for (idx, point_a) in points_a.enumerate() {
-                let point_a = point_a + DIRECTIONS[dir_idx];
-                if map.tiles.get(&point_a).is_some() {
-                    continue;
-                }
-
-                let point_b = points_b[idx];
-                match dir_idx {
-                    0 | 2 => map.portals_h.insert(point_a, (point_b, *rot as i32)),
-                    1 | 3 => map.portals_v.insert(point_a, (point_b, *rot as i32)),
-                    _ => Err("invalid direction")?,
-                };
-            }
-        }
-    }
-
-    println!("\nmap:");
-    for y in -1..map.height + 1 {
-        for x in -1..map.width + 1 {
-            let p = Point::new(x, y);
-
-            match map.tiles.get(&p) {
-                Some(c) => print!("{}", c),
-                None => print!(" "),
-            }
-        }
-        println!();
-    }
-
-    println!("\nmap with portals:");
-    for y in -1..map.height + 1 {
-        for x in -1..map.width + 1 {
-            let p = Point::new(x, y);
-            let mut portal_count = if map.portals_h.contains_key(&p) { 1 } else { 0 };
-            portal_count += if map.portals_v.contains_key(&p) { 1 } else { 0 };
-            if portal_count > 0 {
-                print!("{}", portal_count);
-            } else {
-                match map.tiles.get(&p) {
-                    Some(c) => print!("{}", c),
-                    None => print!(" "),
-                }
-            }
-        }
-        println!();
+        let rotation = get_relative_rotation(&sides, &pos_a, &pos_b); // (400 + (pos_a.manhattan(pos_b) - 1) * (pos_a.x - pos_b.x).signum()) % 4;
+        side_rotation_map.insert((a, b), rotation);
     }
 
     println!("\nCube shape:");
@@ -301,6 +275,139 @@ fn add_cube_portals(map: &mut Map) -> GenericResult {
         }
         println!();
     }
+
+    // generate portals based on relative rotations
+    for (pos_a, (side_a, _)) in side_map.iter().collect_vec() {
+        for (dir_idx, (side_b, _)) in DICE.get(&side_a).ok_or("err")?.iter().enumerate() {
+            let pos_b = side_map
+                .iter()
+                .find(|(k, (s, _))| s == side_b)
+                .map(|(k, _)| k)
+                .ok_or("err")?;
+
+            let rot = (4 + get_relative_rotation(&sides, &pos_a, &pos_b)) % 4;
+            // ((400 + (pos_a.manhattan(pos_b) - 1) * (pos_a.x - pos_b.x).signum()) % 4) as usize;
+            let edge_from = dir_idx;
+            let edge_to = (dir_idx as i32 + 2 + rot) as usize % 4;
+
+            let points_a = edge_ranges(map, &pos_a, edge_from)?;
+            let points_a = itertools::iproduct!(points_a.0, points_a.1)
+                .map(|(x, y)| Point::new(x, y))
+                .collect_vec();
+            let points_b = edge_ranges(map, &pos_b, edge_to)?;
+            let mut points_b = itertools::iproduct!(points_b.0, points_b.1)
+                .map(|(x, y)| Point::new(x, y))
+                .collect_vec();
+
+            // if *side_a == 4 && *side_b == 1 {
+            //     println!(
+            //         "\n{} {} {}",
+            //         (pos_a.manhattan(pos_b) - 1),
+            //         (pos_b.x - pos_a.x).signum(),
+            //         ((400 + (pos_a.manhattan(pos_b) - 1) * (pos_b.x - pos_a.x).signum()) % 4)
+            //     );
+            //     println!("{}", rot);
+            //     println!("{:?}", points_b);
+            // }
+
+            // match (edge_from, edge_to) {
+            //     // (0, 0) => points_b.reverse(),
+            //     (0, 1) => points_b.reverse(),
+            //     (0, 2) => (),
+            //     // (0, 3) => points_b.reverse(),
+            //     // (1, 0) => (),
+            //     // (1, 1) => points_b.reverse(),
+            //     (1, 2) => points_b.reverse(),
+            //     (1, 3) => (),
+            //     // (2, 0) => (),
+            //     // (2, 1) => (),
+            //     // (2, 2) => (),
+            //     // (2, 3) => (),
+            //     // (3, 0) => (),
+            //     // (3, 1) => (),
+            //     // (3, 2) => (),
+            //     // (3, 3) => (),
+
+            //     // TODO
+            //     _ => Err(format!(
+            //         "i don't know e{}->{} s{}->{}",
+            //         edge_from, edge_to, side_a, side_b
+            //     ))?,
+            // };
+
+            // if points_a[0].y < points_b[0].y {
+            //     points_b.reverse();
+            // }
+            match rot {
+                0 | 3 => (),
+                2 | 1 => points_b.reverse(),
+                _ => Err("invalid rotation")?,
+            }
+            // if *side_a == 4 && *side_b == 1 {
+            //     println!("{:?}", points_b);
+            // }
+
+            for (idx, point_a) in points_a.into_iter().enumerate() {
+                let point_a = point_a + DIRECTIONS[dir_idx];
+                if map.tiles.get(&point_a).is_some() {
+                    continue;
+                }
+
+                let point_b = points_b[idx];
+                // if *side_a == 4 && *side_b == 1 {
+                //     println!(" {:?}->{:?}", point_a, point_b);
+                // }
+                let prev = match dir_idx {
+                    0 | 2 => map.portals_h.insert(point_a, (point_b, rot as i32)),
+                    1 | 3 => map.portals_v.insert(point_a, (point_b, rot as i32)),
+                    _ => Err("invalid direction")?,
+                };
+                if prev.is_some() {
+                    Err("not good")?;
+                }
+            }
+        }
+    }
+
+    println!(
+        "{:#?}",
+        side_rotation_map
+            .iter()
+            .map(|((a, b), r)| format!("{}->{} rot: {}", a, b, r))
+            .collect_vec()
+    );
+
+    // println!("\nmap:");
+    // for y in -1..map.height + 1 {
+    //     for x in -1..map.width + 1 {
+    //         let p = Point::new(x, y);
+
+    //         match map.tiles.get(&p) {
+    //             Some(c) => print!("{}", c),
+    //             None => print!(" "),
+    //         }
+    //     }
+    //     println!();
+    // }
+
+    // println!("\nmap with portals:");
+    // for y in -1..map.height + 1 {
+    //     for x in -1..map.width + 1 {
+    //         let p = Point::new(x, y);
+    //         let mut portal_count = if map.portals_h.contains_key(&p) { 1 } else { 0 };
+    //         portal_count += if map.portals_v.contains_key(&p) { 1 } else { 0 };
+    //         if portal_count > 0 {
+    //             print!("{}", portal_count);
+    //         } else {
+    //             match map.tiles.get(&p) {
+    //                 Some(c) => print!("{}", c),
+    //                 None => print!(" "),
+    //             }
+    //         }
+    //     }
+    //     println!();
+    // }
+
     // println!(
     //     "{:#?}",
     //     side_map
@@ -308,15 +415,50 @@ fn add_cube_portals(map: &mut Map) -> GenericResult {
     //         .map(|(p, (a, b))| format!("({}, {}) side: {}, rot: {}", p.x, p.y, a, b))
     //         .collect_vec()
     // );
-    println!(
-        "{:#?}",
-        side_rotation_map
-            .iter()
-            .map(|((a, b), v)| format!("{}->{}: {}", a, b, v))
-            .collect_vec()
-    );
+    // println!(
+    //     "{:#?}",
+    //     side_rotation_map
+    //         .iter()
+    //         .map(|((a, b), v)| format!("{}->{}: {}", a, b, v))
+    //         .collect_vec()
+    // );
 
     Ok(())
+}
+
+fn get_relative_rotation(sides: &Vec<Point>, a: &Point, b: &Point) -> i32 {
+    let sides: HashSet<Point> = HashSet::from_iter(sides.clone());
+    let mut hor: i32 = 0;
+    let mut ver: i32 = 0;
+    let mut visited = HashSet::from([*a]);
+    let mut queue = VecDeque::from([(*a, 0, 0)]);
+
+    // let rotation_by_side
+
+    while let Some((p, _hor, _ver)) = queue.pop_front() {
+        if p == *b {
+            hor = _hor;
+            ver = _ver;
+            break;
+        }
+
+        for (dir_idx, dir) in DIRECTIONS.iter().enumerate() {
+            let mut _hor = _hor;
+            let mut _ver = _ver;
+            let next = p + *dir;
+            match dir_idx {
+                0 | 2 => _hor += (dir_idx as i32 - 1) * 90,
+                1 | 3 => _ver += (dir_idx as i32 - 2) * 90,
+                _ => (),
+            };
+
+            if sides.contains(&next) && visited.insert(next) {
+                queue.push_back((next, _hor, _ver));
+            }
+        }
+    }
+
+    ver + hor
 }
 
 fn edge_ranges(
@@ -373,4 +515,9 @@ enum WrapMode {
 struct Point {
     pub x: i32,
     pub y: i32,
+}
+impl Point {
+    pub fn manhattan(&self, other: &Point) -> i32 {
+        (self.x - other.x).abs() + (self.y - other.y).abs()
+    }
 }
