@@ -1,6 +1,6 @@
-use crate::util::{day_str, GenericResult};
+use crate::util::{GenericResult, YearDay};
 use regex::Regex;
-use std::{error::Error, fmt, str::FromStr};
+use std::{cell::RefCell, error::Error, fmt, str::FromStr};
 
 pub type SolutionResult = GenericResult<String>;
 
@@ -29,23 +29,29 @@ impl SolutionInfo {
         }
     }
 
-    /// Day as string with 0..1 preceding zeros.
-    /// -  5 => "05"
-    /// - 12 => "12"
-    pub fn day_str(&self) -> String {
-        day_str(self.day)
+    pub fn year_day(&self) -> YearDay {
+        YearDay {
+            year: self.year,
+            day: self.day,
+        }
     }
 }
 
+pub trait ProgressHandler {
+    fn on_progress(&mut self, _value: f32) {}
+}
+pub struct NopOnProgress;
+impl ProgressHandler for NopOnProgress {}
+
 pub struct Context {
     pub raw_input: String,
-    pub on_progress: fn(f32) -> (),
+    pub progress_handler: RefCell<Box<dyn ProgressHandler>>,
 }
 impl Default for Context {
     fn default() -> Self {
         Self {
             raw_input: Default::default(),
-            on_progress: |_| (),
+            progress_handler: RefCell::new(Box::new(NopOnProgress)),
         }
     }
 }
@@ -75,13 +81,12 @@ impl Context {
 
     /// Updates the current progress percentage.
     /// value range: 0..1
-    pub fn progress(&self, value: f32) -> Result<(), String> {
-        match value {
-            v if v >= 0.0 && v <= 1.0 => Ok((self.on_progress)(v)),
-            _ => Err(format!("Invalid progress value: {}", value)),
-        }
+    pub fn progress(&self, value: f32) {
+        let value = value.min(1.0).max(0.0);
+        self.progress_handler.borrow_mut().on_progress(value);
     }
 }
+unsafe impl Sync for Context {}
 
 pub struct SolutionType {
     pub info: SolutionInfo,

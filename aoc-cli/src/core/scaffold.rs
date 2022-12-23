@@ -1,7 +1,9 @@
 use crate::config::Config;
 use aoc::core::file_util;
 use aoc::solution::SolutionInfo;
-use aoc::util::{day_str, GenericResult, MsgError};
+use aoc::solutions;
+use aoc::util::{day_str, GenericResult, MsgError, YearDay};
+use itertools::Itertools;
 use regex::Regex;
 use scraper::{ElementRef, Html, Selector};
 use std::borrow::Cow;
@@ -18,7 +20,7 @@ const SOLUTION_DIR: &'static str = "aoc-lib/src/solutions/";
 const SOLUTION_TEMPLATE_PATH: &'static str =
     "aoc-lib/templates/solution/day__DAY_STR__.rs.template";
 
-const TEST_DIR: &'static str = "aoc-lib/src/tests/solutions/";
+const TEST_DIR: &'static str = "aoc-lib/src/tests/";
 const TEST_TEMPLATE_PATH: &'static str = "aoc-lib/templates/test/day__DAY_STR___test.rs.template";
 const INPUT_TEMPLATE_PATH: &'static str = "aoc-lib/templates/input/day__DAY_STR__.txt.template";
 
@@ -50,6 +52,26 @@ impl<'a> From<&PuzzleInfo> for SolutionInfo {
     }
 }
 
+#[derive(Default)]
+pub struct ScaffoldConfig {
+    solution: bool,
+    test: bool,
+    input: bool,
+    open: bool,
+    build: bool,
+}
+impl ScaffoldConfig {
+    fn all() -> ScaffoldConfig {
+        ScaffoldConfig {
+            input: true,
+            solution: true,
+            test: true,
+            build: true,
+            open: true,
+        }
+    }
+}
+
 trait JoinText {
     fn join(self, sep: &str) -> String;
 }
@@ -59,12 +81,48 @@ impl JoinText for scraper::element_ref::Text<'_> {
     }
 }
 
-pub fn scaffold_day(config: &Config, year: i32, day: u32) {
+pub fn scaffold_inputs(config: &Config) {
+    let solutions = solutions::create_map();
+    let days = solutions.keys().sorted().collect_vec();
+    println!("Scaffolding inputs for {} days...", solutions.len());
+    for (index, k) in days.iter().enumerate() {
+        match scaffold_day_internal(
+            config,
+            k.year,
+            k.day,
+            ScaffoldConfig {
+                input: true,
+                build: index == days.len() - 1,
+                ..Default::default()
+            },
+        ) {
+            Err(_) => break,
+            Ok(_) => (),
+        }
+    }
+}
+
+pub fn scaffold_days(config: &Config, days: Vec<YearDay>) -> GenericResult {
+    for (index, date) in days.iter().enumerate() {
+        let mut scaffold_config = ScaffoldConfig::all();
+        scaffold_config.build = index == days.len() - 1; // only build on the last day
+        scaffold_day_internal(config, date.year, date.day, scaffold_config)?;
+    }
+
+    Ok(())
+}
+
+fn scaffold_day_internal(
+    config: &Config,
+    year: i32,
+    day: u32,
+    scaffold_config: ScaffoldConfig,
+) -> GenericResult {
     let session_key = match &config.session_key {
         Some(key) => key.to_owned(),
         None => {
             println!("Please provide your session key in aoc_config.ini!");
-            return;
+            return Err(MsgError("no session key found").into());
         }
     };
 
@@ -86,34 +144,66 @@ pub fn scaffold_day(config: &Config, year: i32, day: u32) {
 
     let solution_dir = get_dir(SOLUTION_DIR);
     let test_dir = get_dir(TEST_DIR);
-    let fs = generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, &solution_dir).unwrap();
-    let ft = generate_file(&puzzle_info, TEST_TEMPLATE_PATH, &test_dir).unwrap();
-    let fi = generate_file(
-        &puzzle_info,
-        INPUT_TEMPLATE_PATH,
-        PathBuf::from(file_util::input_file_path(&(&puzzle_info).into()))
-            .parent()
-            .unwrap()
-            .to_str()
-            .unwrap(),
-    )
-    .unwrap();
 
+    let fs = match scaffold_config.solution {
+        true => Some(generate_file(&puzzle_info, SOLUTION_TEMPLATE_PATH, &solution_dir).unwrap()),
+        false => None,
+    };
+    let ft = match scaffold_config.test {
+        true => Some(generate_file(&puzzle_info, TEST_TEMPLATE_PATH, &test_dir).unwrap()),
+        false => None,
+    };
+    let fi = match scaffold_config.input {
+        true => {
+            if puzzle_info.puzzle_input.len() == 0 {
+                println!("Could not scaffold input, check session key in aoc_config.ini!");
+                return Err(MsgError("empty input").into());
+            } else {
+                Some(
+                    generate_file(
+                        &puzzle_info,
+                        INPUT_TEMPLATE_PATH,
+                        PathBuf::from(file_util::input_file_path(&(&puzzle_info).into()))
+                            .parent()
+                            .unwrap()
+                            .to_str()
+                            .unwrap(),
+                    )
+                    .unwrap(),
+                )
+            }
+        }
+        false => None,
+    };
+
+    let files_to_open = [fi, ft, fs]
+        .into_iter()
+        .filter_map(|x| x)
+        .collect::<Vec<_>>();
     if let Some(editor_name) = &config.editor_after_scaffold {
-        println!("Opening scaffolded files in {}...", editor_name);
-        Command::new("cmd")
-            .args(["/C", &editor_name, &fi, &ft, &fs])
-            .output()
-            .expect("open scaffolded files in editor");
+        if scaffold_config.open {
+            let args = ["/C", &editor_name]
+                .into_iter()
+                .map(|x| x.to_owned())
+                .chain(files_to_open.into_iter());
+            println!("Opening scaffolded files in {}...", editor_name);
+            Command::new("cmd")
+                .args(args)
+                .output()
+                .expect("open scaffolded files in editor");
+        }
     }
 
-    println!("Re-building to generate indexes...");
-    Command::new("cargo")
-        .args(["build", "-p", "aoc-lib"])
-        .output()
-        .expect("builds without errors");
+    if scaffold_config.build {
+        println!("Re-building to generate indexes...");
+        Command::new("cargo")
+            .args(["build", "-p", "aoc-lib"])
+            .output()
+            .expect("builds without errors");
+    }
 
     println!("Ok.");
+    Ok(())
 }
 
 fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
@@ -146,7 +236,7 @@ fn parse_puzzle_info(puzzle_info: &mut PuzzleInfo, session_key: &str) {
                 .next()
                 .and_then(ElementRef::wrap)
                 .and_then(|x| Some(x.text().join(" ")))
-                .and_then(|x| Some((x.to_lowercase().contains("example"), elem.text().join(" "))))
+                .and_then(|x| Some((x.to_lowercase().contains("example"), elem.text().join(""))))
         })
         .collect::<Vec<_>>();
 
@@ -185,10 +275,20 @@ fn request_cached(sub_url: &str, session_key: &str) -> GenericResult<String> {
     }
 
     println!("Requesting: {}", &url);
-    let contents = ureq::get(&url.to_string())
+    // Specify user agent as requested here: https://www.reddit.com/r/adventofcode/comments/z9dhtd/please_include_your_contact_info_in_the_useragent/
+    let agent = ureq::AgentBuilder::new()
+        .user_agent("https://github.com/sanraith/aoc2022 by sanraith@users.noreply.github.com")
+        .build();
+    let contents = agent
+        .get(&url.to_string())
         .set("cookie", &format!("session={session_key};"))
-        .call()?
-        .into_string()?;
+        .call()
+        .map_err(|e| MsgError(e.to_string()))
+        .and_then(|x| x.into_string().map_err(|e| MsgError(e.to_string())))
+        .map_err(|e| {
+            println!("Error during request: {}", e.to_string());
+            e
+        })?;
 
     println!(
         "Storing response in cache: {}",

@@ -26,8 +26,7 @@ const base_config = {
         new CopyPlugin({
             patterns: [
                 path.resolve(WEB_DIR, '.nojekyll'),
-                path.resolve(WEB_DIR, 'favicon.ico'),
-                { from: 'input', to: 'input' }
+                path.resolve(WEB_DIR, 'favicon.ico')
             ]
         })
     ],

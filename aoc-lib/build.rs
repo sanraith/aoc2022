@@ -6,14 +6,12 @@ type GenericResult<T> = Result<T, Box<dyn Error>>;
 const MODULE_DEFINITIONS_PLACEHOLDER: &'static str = "__MODULE_DEFINITIONS__";
 const SOLUTION_TYPE_LIST_PLACEHOLDER: &'static str = "__SOLUTION_TYPE_LIST__";
 const SOLUTION_TYPE_LIST_APPEND_PLACEHOLDER: &'static str = "__SOLUTION_TYPE_LIST_APPEND__";
-const MODULE_NAME_PLACEHOLDER: &'static str = "__MODULE_NAME__";
 const RE_EXPORTS_PLACEHOLDER: &'static str = "__RE_EXPORTS__";
 
 const SOLUTION_DIRECTORY: &'static str = "src/solutions/";
 const SOLUTION_MODULE_TEMPLATE_PATH: &'static str = "templates/solution/mod.rs.template";
-const TEST_DIRECTORY: &'static str = "src/tests";
+const TEST_DIRECTORY: &'static str = "src/tests/";
 const TEST_MODULE_TEMPLATE_PATH: &'static str = "templates/test/mod.rs.template";
-const RELATIVE_MODULE_FILE_NAME: &'static str = "../__MODULE_NAME__.rs";
 
 fn main() {
     println!("cargo:rerun-if-changed={}", SOLUTION_DIRECTORY);
@@ -30,7 +28,7 @@ fn generate_modules() -> GenericResult<()> {
 
 fn generate_source_module(solution_dir: &str) -> GenericResult<()> {
     let solution_module_re = Regex::new(r"^(day\S+).rs$")?;
-    let struct_name_re = Regex::new(r"^[^/]*pub struct (Day[a-zA-Z0-9_]+)")?;
+    let struct_name_re = Regex::new(r"\n[^/]*pub struct (Day[a-zA-Z0-9_]+)")?;
 
     let mut module_lines: Vec<String> = Vec::new();
     let mut export_lines: Vec<String> = Vec::new();
@@ -106,7 +104,7 @@ fn generate_test_module(test_dir: &str) -> GenericResult<()> {
     let file_prefix_regex = Regex::new(r"(.*)\..*").unwrap();
     let files = fs::read_dir(test_dir)?
         .filter_map(|x| x.ok())
-        .filter(|x| x.path().is_file());
+        .filter(|x| x.path().is_file() && x.path().file_name().unwrap() != "mod.rs");
     for entry in files {
         let file_name = entry.file_name().to_str().unwrap().to_owned();
         let mod_name = file_prefix_regex
@@ -147,15 +145,7 @@ fn save_file(path: PathBuf, output: String) -> GenericResult<()> {
 }
 
 fn get_module_file_name(module_dir: &str) -> PathBuf {
-    let module_name = PathBuf::from(module_dir)
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_owned();
-    let mut file_name = RELATIVE_MODULE_FILE_NAME.to_owned();
-    replace_placeholder(&mut file_name, MODULE_NAME_PLACEHOLDER, &module_name);
-    let path = PathBuf::from_iter([module_dir, &file_name]);
+    let path = PathBuf::from_iter([module_dir, "mod.rs"]);
     path
 }
 
@@ -171,6 +161,10 @@ fn collect_modules_from_dir(
         }
 
         let file_name = entry.file_name().into_string().unwrap();
+        if file_name == "mod.rs" {
+            continue;
+        }
+
         let mod_name = match solution_module_re
             .captures(&file_name)
             .map_or(None, |c| c.get(1))

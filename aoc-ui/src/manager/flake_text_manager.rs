@@ -12,9 +12,10 @@ use crate::{
 };
 use bracket_terminal::prelude::{BTerm, DrawBatch, PointF};
 
-const MOVE_TRANSITION_MS: f32 = 1500.0;
-const FADE_TRANSITION_MS: f32 = 500.0;
-const TARGET_FLAKE_SCALE: f32 = 0.35;
+// const MOVE_TRANSITION_MS: f32 = 2000.0;
+// const FADE_TRANSITION_MS: f32 = 1000.0;
+// const FADE_TRANSITION_MS_GLYPH: f32 = 500.0;
+const TARGET_FLAKE_SCALE: f32 = 0.50;
 
 // Flake position corrections for less "pop-in"
 const CORRECTION_X: f32 = -0.4;
@@ -35,7 +36,7 @@ pub struct FlakeCharacter {
     pub state: CharState,
 }
 impl FlakeCharacter {
-    pub fn new(char: char, base_pos: PointF) -> FlakeCharacter {
+    pub fn new(char: char, base_pos: PointF, color: (u8, u8, u8, u8)) -> FlakeCharacter {
         let char_image = CHARACTER_IMAGES
             .get(&char)
             .or_else(|| CHARACTER_IMAGES.get(&' '))
@@ -47,6 +48,9 @@ impl FlakeCharacter {
                 .map(move |(x, _)| (x, y))
         });
         let queue = pixels
+            .enumerate()
+            .filter(|(i, _)| i % 2 == 0)
+            .map(|(_, p)| p)
             .map(|(x, y)| PointF {
                 x: base_pos.x + x as f32 / char_image::CHAR_WIDTH as f32 + CORRECTION_X,
                 y: base_pos.y as f32 + y as f32 / char_image::CHAR_HEIGHT as f32 + CORRECTION_Y,
@@ -60,6 +64,7 @@ impl FlakeCharacter {
                     base: DrawingBase {
                         pos: base_pos,
                         opaqueness: 0.0,
+                        color,
                         ..Default::default()
                     },
                 },
@@ -75,12 +80,26 @@ impl FlakeCharacter {
 #[derive(Default)]
 pub struct FlakeCharLine {
     pub pos: PointF,
+    move_time: f32,
+    fade_out_time: f32,
+    fade_in_time: f32,
     pub text: Vec<FlakeCharacter>,
+    color: (u8, u8, u8, u8),
 }
 impl FlakeCharLine {
-    pub fn new(pos: PointF) -> FlakeCharLine {
+    pub fn new(
+        pos: PointF,
+        move_time: f32,
+        fade_out_time: f32,
+        fade_in_time: f32,
+        color: (u8, u8, u8, u8),
+    ) -> FlakeCharLine {
         FlakeCharLine {
             pos,
+            move_time,
+            fade_out_time,
+            fade_in_time,
+            color,
             ..Default::default()
         }
     }
@@ -104,7 +123,9 @@ impl FlakeCharLine {
 
             match flake_char.state {
                 CharState::Assembling => animate_flakes(ctx, flake_char),
-                CharState::DoneAssembling => start_fading(flake_char),
+                CharState::DoneAssembling => {
+                    start_fading(flake_char, self.fade_in_time, self.fade_out_time)
+                }
                 CharState::Fading => animate_fading(ctx, flake_char),
                 CharState::Done => flake_char.flakes.clear(),
             }
@@ -121,7 +142,7 @@ impl FlakeCharLine {
             x: self.pos.x + self.text.len() as f32,
             y: self.pos.y,
         };
-        let flake_char = FlakeCharacter::new(char, pos);
+        let flake_char = FlakeCharacter::new(char, pos, self.color.clone());
         self.text.push(flake_char);
     }
 
@@ -135,14 +156,17 @@ impl FlakeCharLine {
                 let mut flake = flakes.pop().unwrap();
                 let pos = fc.queue.pop().unwrap();
                 let group = AnimatorGroup::new(flake.animators.drain(..).collect::<Vec<_>>());
+                let color = self.color.clone();
                 let move_to = SimpleAnimator::<Snowflake, _>::new(move |_, target| {
                     target.pos = pos;
                     target.scale = TARGET_FLAKE_SCALE;
+                    target.opaqueness = 1.0;
+                    target.color = color;
                     AnimationState::Completed
                 });
                 let transition = TransitionAnimator::new(
                     &flake.item,
-                    MOVE_TRANSITION_MS,
+                    self.move_time,
                     EaseType::EaseInOutCubic,
                     group,
                     move_to,
@@ -176,23 +200,22 @@ impl FlakeCharLine {
             })
             .sum()
     }
-}
 
-fn is_waiting_for_new_flakes_or_animation(flake_char: &mut FlakeCharacter) -> bool {
-    flake_char.queue.len() > 0
-        || flake_char.flakes.iter().any(|f| {
-            f.animators
-                .iter()
-                .any(|a| *a.state() == AnimationState::Running)
-        })
-        || flake_char
-            .char
-            .animators
+    pub fn progress(&self) -> f32 {
+        self.text
             .iter()
-            .any(|a| *a.state() == AnimationState::Running)
+            .map(|c| match c.state {
+                CharState::Assembling => 0.0,
+                CharState::DoneAssembling => 0.7,
+                CharState::Fading => 0.8,
+                CharState::Done => 1.0,
+            })
+            .reduce(f32::min)
+            .unwrap_or(1.0)
+    }
 }
 
-fn start_fading(flake_char: &mut FlakeCharacter) {
+fn start_fading(flake_char: &mut FlakeCharacter, fade_in_time: f32, fade_out_time: f32) {
     // fade flakes
     for flake in flake_char.flakes.iter_mut() {
         let prev_animators_group =
@@ -205,8 +228,8 @@ fn start_fading(flake_char: &mut FlakeCharacter) {
         });
         let transition = TransitionAnimator::new(
             &flake.item,
-            FADE_TRANSITION_MS,
-            EaseType::EaseInOutCubic,
+            fade_out_time,
+            EaseType::Linear,
             prev_animators_group,
             fade_out,
         );
@@ -221,12 +244,26 @@ fn start_fading(flake_char: &mut FlakeCharacter) {
     });
     let transition = TransitionAnimator::new(
         &flake_char.char.item,
-        FADE_TRANSITION_MS,
-        EaseType::EaseInOutCubic,
+        fade_in_time,
+        EaseType::Linear,
         nop,
         fade_in,
     );
     flake_char.char.animators.push(Box::new(transition));
+}
+
+fn is_waiting_for_new_flakes_or_animation(flake_char: &mut FlakeCharacter) -> bool {
+    flake_char.queue.len() > 0
+        || flake_char.flakes.iter().any(|f| {
+            f.animators
+                .iter()
+                .any(|a| *a.state() == AnimationState::Running)
+        })
+        || flake_char
+            .char
+            .animators
+            .iter()
+            .any(|a| *a.state() == AnimationState::Running)
 }
 
 fn animate_fading(ctx: &BTerm, flake_char: &mut FlakeCharacter) {

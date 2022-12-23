@@ -18,7 +18,7 @@ impl<T: Drawable> Animator<T> for MouseRepellentAnimator {
             (x, y) if x > 0.0 && y > 0.0 => true,
             _ => false,
         };
-        let influence = 10.0;
+        let influence = 7.5;
         let power = 20.0;
         let mp = get_mouse_tile_pos(&self.config.borrow());
 

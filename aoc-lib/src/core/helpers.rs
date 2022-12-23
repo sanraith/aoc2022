@@ -1,4 +1,34 @@
+use itertools::Itertools;
+use regex::Regex;
 use std::cmp::Ordering;
+
+/// Returns the string contents of the first matched capture group.
+pub fn re_capture_group<'a>(re: &Regex, text: &'a str) -> Option<&'a str> {
+    re.captures(text)
+        .and_then(|c| c.get(1))
+        .and_then(|g| Some(g.as_str()))
+}
+
+/// Returns the string contents of the matched capture groups.
+pub fn re_capture_groups<'a>(re: &Regex, text: &'a str) -> Option<Vec<&'a str>> {
+    re.captures(text).map(|c| {
+        c.iter()
+            .skip(1)
+            .filter_map(|x| x)
+            .map(|x| x.as_str())
+            .collect_vec()
+    })
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn is_wasm() -> bool {
+    true
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn is_wasm() -> bool {
+    false
+}
 
 pub fn post_increment<T: num::Num + Copy>(value: &mut T) -> T {
     let result = *value;

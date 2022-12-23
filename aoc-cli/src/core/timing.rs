@@ -9,7 +9,7 @@ pub fn latest_aoc_date() -> YearDay {
         .checked_sub_signed(Duration::hours(AOC_UTC_START_HOUR))
         .unwrap();
     match dt {
-        _ if dt.month() == 12 => YearDay::new(dt.year(), dt.day().max(LAST_AOC_DAY_OF_DECEMBER)),
+        _ if dt.month() == 12 => YearDay::new(dt.year(), dt.day().min(LAST_AOC_DAY_OF_DECEMBER)),
         _ => YearDay::new(dt.year() - 1, LAST_AOC_DAY_OF_DECEMBER),
     }
 }

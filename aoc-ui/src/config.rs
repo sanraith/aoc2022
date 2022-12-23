@@ -4,7 +4,8 @@ pub struct Config {
     pub height: u32,
     pub tile_size_x: u32,
     pub tile_size_y: u32,
-    pub scale: f32,
+    pub scale_x: f32,
+    pub scale_y: f32,
 }
 
 pub fn default() -> Config {
@@ -13,6 +14,7 @@ pub fn default() -> Config {
         height: 50,
         tile_size_x: 16,
         tile_size_y: 16,
-        scale: 1.0,
+        scale_x: 1.0,
+        scale_y: 1.0,
     }
 }

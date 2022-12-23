@@ -1,19 +1,48 @@
 {
+    "cSpell.ignorePaths": [
+        "aoc-lib/src/tests/year*/*_test.rs"
+    ],
     "cSpell.words": [
+        "addx",
         "Animatable",
         "arboard",
         "bindgen",
+        "CHARCODE",
         "chrono",
         "clearscreen",
+        "cosa",
+        "cosb",
+        "cosc",
         "Datelike",
+        "Deque",
+        "humn",
+        "iproduct",
         "itertools",
         "Keypresses",
         "Pathing",
         "powi",
+        "Proboscidea",
         "rngs",
         "rustup",
         "sanraith",
         "signum",
-        "ureq"
-    ]
+        "sina",
+        "sinb",
+        "sinc",
+        "Triggerable",
+        "ureq",
+        "Volcanium",
+        "voxel",
+        "voxels"
+    ],
+    "files.exclude": {
+        "**/mod.rs": true, // Hide auto-generated modules in explorer
+        // --- Defaults ---
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+    }
 }

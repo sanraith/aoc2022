@@ -1,14 +1,14 @@
-use crate::solution::SolutionInfo;
+use crate::{solution::SolutionInfo, util};
 use std::path::PathBuf;
 
-pub const INPUT_PATH: &'static str = "input";
+const INPUT_PATH: &'static str = "aoc-lib/input";
 
 pub fn year_directory_name(year: i32) -> String {
     format!("year{}", year)
 }
 
 pub fn input_file_name(info: &SolutionInfo) -> String {
-    format!("day{}.txt", info.day_str())
+    format!("day{}.txt", util::day_str(info.day))
 }
 
 pub fn input_file_path(info: &SolutionInfo) -> String {

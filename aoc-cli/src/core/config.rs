@@ -7,7 +7,7 @@ pub const KEY_SESSION_KEY: &'static str = "session_key";
 pub const KEY_EDITOR_AFTER_SCAFFOLD: &'static str = "editor_after_scaffold";
 pub const KEY_COPY_RESULT_TO_CLIPBOARD: &'static str = "copy_result_to_clipboard";
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Config {
     pub session_key: Option<String>,
     pub editor_after_scaffold: Option<String>,

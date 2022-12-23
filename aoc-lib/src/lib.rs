@@ -3,8 +3,10 @@ pub mod core {
     pub mod file_util;
     pub mod helpers;
     pub mod solution;
+    pub mod solution_runner;
     pub mod util;
 }
+pub mod inputs;
 pub mod solutions;
 
 #[cfg(test)]

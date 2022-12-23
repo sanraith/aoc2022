@@ -1,6 +1,5 @@
-use crate::core::{file_util, solution::*};
+use crate::{core::solution::*, inputs, util::YearDay};
 use regex::Regex;
-use std::{fs, path::PathBuf};
 
 pub fn assert_result(result: SolutionResult, expected: &str, message: &str) {
     match result {
@@ -28,11 +27,7 @@ pub fn setup<T>(input: &str) -> (T, Context)
 where
     T: Solution + SolutionStatic,
 {
-    // Remove leading empty lines to be able to format input in tests nicer
-    let input = Regex::new(r"^(?:\s*\n)+")
-        .unwrap()
-        .replace(input, "")
-        .to_string();
+    let input = clean_raw_multiline(&input);
     let ctx = Context {
         raw_input: input,
         ..Default::default()
@@ -44,17 +39,21 @@ where
     (day, ctx)
 }
 
+/** Remove leading empty lines to be able to format input in tests nicer */
+pub fn clean_raw_multiline(input: &str) -> String {
+    Regex::new(r"^(?:\s*\n)+")
+        .unwrap()
+        .replace(input, "")
+        .to_string()
+}
+
 pub fn setup_from_file<T>() -> (T, Context)
 where
     T: Solution + SolutionStatic,
 {
-    let file_path = file_util::input_file_path(&T::as_type().info);
-    let input_paths = [vec!["..", &file_path], vec![&file_path]];
-    let input = input_paths
-        .iter()
-        .map(|p| PathBuf::from_iter(p).to_str().unwrap().to_owned())
-        .find_map(|p| fs::read_to_string(p).ok())
-        .expect(&format!("read input file from {:?}", input_paths));
+    let SolutionInfo { year, day, .. } = T::as_type().info;
+    let year_day = YearDay::new(year, day);
+    let input = inputs::get(&year_day).expect("input should be available");
 
     return setup::<T>(&input);
 }

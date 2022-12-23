@@ -1,5 +1,7 @@
-
 # --- RUST ---
+# Collection inputs
+/aoc-lib/input
+
 # Local cache for aoc-cli
 /.cache
 
@@ -14,6 +16,9 @@
 
 # Debug webassembly package
 **/pkg
+
+# --- Blender ---
+*.blend1
 
 # --- NODE ---
 /dist
