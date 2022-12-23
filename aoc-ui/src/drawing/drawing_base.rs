@@ -4,6 +4,7 @@ use bracket_terminal::prelude::{BTerm, DrawBatch, PointF};
 pub struct DrawingBase {
     pub pos: PointF,
     pub scale: f32,
+    pub color: (u8, u8, u8, u8),
     /** Rotation in degrees. */
     pub rotation: f32,
     /** Transparency ranging 0.0..=1.0. */
@@ -16,6 +17,7 @@ impl Default for DrawingBase {
         Self {
             pos: Default::default(),
             scale: 1.0,
+            color: (255, 255, 255, 255),
             rotation: 0.0,
             opaqueness: 1.0,
             visible: true,

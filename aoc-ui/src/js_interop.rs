@@ -80,7 +80,7 @@ pub fn worker_on_message(message: JsValue) {
     match command {
         WorkerCommand::StartDay(year_day, _input) => {
             let stream = Arc::new(Mutex::new(WorkerSyncStream {}));
-            solution_runner::run_solution(year_day, Input::Default, stream, 10.1);
+            solution_runner::run_solution(year_day, Input::Default, stream, 2.1);
         }
     };
 }

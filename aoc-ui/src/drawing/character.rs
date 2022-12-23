@@ -8,6 +8,7 @@ pub struct Character {
 }
 impl Drawable for Character {
     fn draw(&self, _ctx: &BTerm, batch: &mut DrawBatch) {
+        let c = self.base.color;
         batch.set_fancy(
             PointF {
                 x: self.base.pos.x,
@@ -17,7 +18,7 @@ impl Drawable for Character {
             Degrees::new(self.base.rotation),
             PointF::new(self.base.scale, self.base.scale),
             ColorPair::new(
-                RGBA::from_u8(255, 255, 255, (self.base.opaqueness * 255.0) as u8),
+                RGBA::from_u8(c.0, c.1, c.2, (self.base.opaqueness * 255.0) as u8),
                 RGBA::from_u8(0, 0, 0, 0),
             ),
             to_cp437(self.glyph),

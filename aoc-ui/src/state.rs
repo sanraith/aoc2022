@@ -25,35 +25,45 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+enum SolveState {
+    NotSolved,
+    Solving,
+    Solved,
+}
+
 pub struct UiState {
     config: Rc<RefCell<Config>>,
     total_time: f32,
     snowflake_manager: Rc<RefCell<SnowflakeManager>>,
     text_manager: FlakeCharLine,
-    solve_state: Option<Arc<Mutex<LocalSyncStream>>>,
+    solve_stream: Option<Arc<Mutex<LocalSyncStream>>>,
     ui_text_manager: UiTextManager,
+    solve_state: SolveState,
 }
 impl GameState for UiState {
     fn tick(&mut self, ctx: &mut BTerm) {
         self.total_time += ctx.frame_time_ms;
+        let bg_color = (15, 15, 35, 255);
+        ctx.cls_bg(bg_color);
+        ctx.screen_burn_color(RGB::named(CYAN));
 
         let mut normal_batch = DrawBatch::new();
         normal_batch.target(0);
-        normal_batch.cls();
+        normal_batch.cls_color(bg_color);
 
         let mut fancy_batch = DrawBatch::new();
         fancy_batch.target(1);
-        fancy_batch.cls();
+        fancy_batch.cls_color(bg_color);
 
-        self.handle_js_scale_changes(&mut normal_batch);
+        self.handle_js_scale_changes();
         self.handle_bracket_events(ctx);
         self.handle_mouse(&mut fancy_batch);
 
         self.handle_solution_progress_updates();
         self.handle_flake_text_manager(ctx, &mut fancy_batch);
         self.text_manager.tick(ctx, &mut fancy_batch);
-        self.print_status(ctx, &mut normal_batch);
         self.ui_text_manager.tick(ctx, &mut normal_batch);
+        self.print_status(ctx, &mut normal_batch);
 
         fancy_batch.submit(2).expect("Render error");
         normal_batch.submit(1).expect("Render error");
@@ -67,25 +77,39 @@ impl UiState {
         UiState {
             config: Rc::clone(&config),
             snowflake_manager: Rc::clone(&snowflake_manager),
-            text_manager: FlakeCharLine::new(PointF::from((1.0, 8.0))),
+            text_manager: FlakeCharLine::new(
+                PointF::from((1.0, 8.0)),
+                2000.0,
+                1000.0,
+                500.0,
+                (255, 255, 255, 255),
+            ),
             total_time: 0.0,
-            solve_state: None,
-            ui_text_manager: UiTextManager::new(config, snowflake_manager, Point::new(1, 7)),
+            solve_stream: None,
+            ui_text_manager: UiTextManager::new(config, snowflake_manager, Point::new(1, 5)),
+            solve_state: SolveState::NotSolved,
         }
     }
 
     fn print_status(&self, ctx: &BTerm, batch: &mut DrawBatch) {
-        batch.print(Point::from_tuple((1, 2)), "Advent of Code 2022");
-        let status = format!("FPS: {:>2}", ctx.fps as i32);
-        batch.print(Point::from_tuple((78, 1)), status);
+        batch.print_color_centered(
+            2,
+            "*** Advent of Code 2022 ***",
+            // ColorPair::new((255, 255, 255, 255), (0, 0, 0, 0)), // white
+            // ColorPair::new((127, 189, 57, 255), (0, 0, 0, 0)), // yellow
+            ColorPair::new((0, 204, 0, 255), (0, 0, 0, 0)), // AOC bright green
+        );
+        let status = format!("FPS: {: >6}", ctx.fps as i32);
+        let status_color = ColorPair::new((216, 216, 216, 255), (0, 0, 0, 0)); // gray
+        batch.print_color(Point::from_tuple((78, 1)), status, status_color);
         let js_bridge = JS_BRIDGE.lock().unwrap();
         if js_bridge.scale > 0.0 {
             let scale = &format!("Scale: {:.2}", js_bridge.scale);
-            batch.print(Point::from_tuple((78, 2)), scale);
+            batch.print_color(Point::from_tuple((78, 2)), scale, status_color);
         }
 
         // Print start button
-        if let None = self.solve_state {
+        if let SolveState::NotSolved = self.solve_state {
             let button_lines = char_image::draw_text("Tap here", '#', ' ')
                 .into_iter()
                 .map(|l| format!("   {}", l))
@@ -105,7 +129,11 @@ impl UiState {
                 })
                 .collect_vec();
             for (y, line) in button_lines.iter().enumerate() {
-                batch.print(Point::new(x_start, y_start + y as i32), line);
+                batch.print_color(
+                    Point::new(x_start, y_start + y as i32),
+                    line,
+                    ColorPair::new((255, 255, 255, 255), (0, 0, 0, 0)),
+                );
             }
         }
     }
@@ -153,14 +181,15 @@ impl UiState {
         });
 
         // Start solver via mouse click
-        if INPUT.lock().is_mouse_button_pressed(0) && self.solve_state.is_none() {
+        if INPUT.lock().is_mouse_button_pressed(0) && self.solve_stream.is_none() {
             self.ui_text_manager.clear();
+            self.solve_state = SolveState::Solving;
             let runner: Box<dyn SolutionRunner<LocalSyncStream>> =
                 match JS_BRIDGE.lock().unwrap().worker_wrapper {
                     Some(_) => Box::new(WasmRunner {}),
                     None => Box::new(ThreadSolutionRunner {}),
                 };
-            self.solve_state = Some(runner.run(
+            self.solve_stream = Some(runner.run(
                 YearDay { year: 2022, day: 1 },
                 aoc::core::solution_runner::Input::Default,
             ));
@@ -232,7 +261,7 @@ impl UiState {
 
     fn handle_solution_progress_updates(&mut self) {
         let mut next_year: Option<YearDay> = None;
-        if let Some(x) = &self.solve_state {
+        if let Some(x) = &self.solve_stream {
             if let Some(items) = x.lock().unwrap().next_items() {
                 for item in items {
                     if let SolveProgress::Done(pack) = &item {
@@ -242,12 +271,18 @@ impl UiState {
                             if pack.year_day < *max_day {
                                 next_year =
                                     Some(YearDay::new(pack.year_day.year, pack.year_day.day + 1));
+                            } else {
+                                self.solve_state = SolveState::Solved;
                             }
                         }
                     }
                     self.ui_text_manager.update_progress(item);
                 }
             }
+        }
+
+        if let SolveState::Solved = self.solve_state {
+            self.solve_stream = None;
         }
 
         // Start next day if there are more days to solve
@@ -261,13 +296,13 @@ impl UiState {
                     Some(_) => Box::new(WasmRunner {}),
                     None => Box::new(ThreadSolutionRunner {}),
                 };
-            self.solve_state =
+            self.solve_stream =
                 Some(runner.run(next_day, aoc::core::solution_runner::Input::Default));
         }
     }
 
     /// Apply config changes from javascript if we are running in WASM
-    fn handle_js_scale_changes(&mut self, normal_batch: &mut DrawBatch) {
+    fn handle_js_scale_changes(&mut self) {
         let js_bridge = js_interop::JS_BRIDGE.lock().unwrap();
         if js_bridge.scale > 0.0 {
             (*self.config.borrow_mut()).scale_x = js_bridge.scale as f32;
