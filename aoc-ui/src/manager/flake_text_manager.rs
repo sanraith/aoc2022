@@ -12,9 +12,10 @@ use crate::{
 };
 use bracket_terminal::prelude::{BTerm, DrawBatch, PointF};
 
-const MOVE_TRANSITION_MS: f32 = 1500.0;
-const FADE_TRANSITION_MS: f32 = 500.0;
-const TARGET_FLAKE_SCALE: f32 = 0.35;
+const MOVE_TRANSITION_MS: f32 = 2000.0;
+const FADE_TRANSITION_MS: f32 = 1000.0;
+const FADE_TRANSITION_MS_GLYPH: f32 = 500.0;
+const TARGET_FLAKE_SCALE: f32 = 0.50;
 
 // Flake position corrections for less "pop-in"
 const CORRECTION_X: f32 = -0.4;
@@ -47,6 +48,9 @@ impl FlakeCharacter {
                 .map(move |(x, _)| (x, y))
         });
         let queue = pixels
+            .enumerate()
+            .filter(|(i, _)| i % 2 == 0)
+            .map(|(_, p)| p)
             .map(|(x, y)| PointF {
                 x: base_pos.x + x as f32 / char_image::CHAR_WIDTH as f32 + CORRECTION_X,
                 y: base_pos.y as f32 + y as f32 / char_image::CHAR_HEIGHT as f32 + CORRECTION_Y,
@@ -138,6 +142,7 @@ impl FlakeCharLine {
                 let move_to = SimpleAnimator::<Snowflake, _>::new(move |_, target| {
                     target.pos = pos;
                     target.scale = TARGET_FLAKE_SCALE;
+                    target.opaqueness = 1.0;
                     AnimationState::Completed
                 });
                 let transition = TransitionAnimator::new(
@@ -176,6 +181,19 @@ impl FlakeCharLine {
             })
             .sum()
     }
+
+    pub fn progress(&self) -> f32 {
+        self.text
+            .iter()
+            .map(|c| match c.state {
+                CharState::Assembling => 0.0,
+                CharState::DoneAssembling => 0.7,
+                CharState::Fading => 0.8,
+                CharState::Done => 1.0,
+            })
+            .reduce(f32::min)
+            .unwrap_or(1.0)
+    }
 }
 
 fn is_waiting_for_new_flakes_or_animation(flake_char: &mut FlakeCharacter) -> bool {
@@ -206,7 +224,7 @@ fn start_fading(flake_char: &mut FlakeCharacter) {
         let transition = TransitionAnimator::new(
             &flake.item,
             FADE_TRANSITION_MS,
-            EaseType::EaseInOutCubic,
+            EaseType::Linear,
             prev_animators_group,
             fade_out,
         );
@@ -221,8 +239,8 @@ fn start_fading(flake_char: &mut FlakeCharacter) {
     });
     let transition = TransitionAnimator::new(
         &flake_char.char.item,
-        FADE_TRANSITION_MS,
-        EaseType::EaseInOutCubic,
+        FADE_TRANSITION_MS_GLYPH,
+        EaseType::Linear,
         nop,
         fade_in,
     );

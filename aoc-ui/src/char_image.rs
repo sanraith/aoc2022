@@ -1,6 +1,7 @@
 use crate::resources;
 use bracket_terminal::prelude::to_char;
 use image::{io::Reader, GenericImageView};
+use itertools::Itertools;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, io::Cursor};
 
@@ -14,8 +15,7 @@ pub struct CharImage {
     pub rows: [[u8; CHAR_WIDTH as usize]; CHAR_WIDTH as usize],
 }
 
-/// Prints a line by converting each character pixel to a single character itself
-pub fn print_line(text: &str, on: char, off: char) {
+pub fn draw_text(text: &str, on: char, off: char) -> Vec<String> {
     let mut lines = Vec::with_capacity(CHAR_HEIGHT as usize);
     (0..CHAR_HEIGHT)
         .into_iter()
@@ -34,8 +34,17 @@ pub fn print_line(text: &str, on: char, off: char) {
         }
     }
 
+    lines
+        .into_iter()
+        .map(|x| x.into_iter().collect::<String>())
+        .collect_vec()
+}
+
+/// Prints a line by converting each character pixel to a single character itself
+pub fn print_text(text: &str, on: char, off: char) {
+    let lines = draw_text(text, on, off);
     for line in lines {
-        println!("{}", line.into_iter().collect::<String>());
+        println!("{}", line);
     }
 }
 

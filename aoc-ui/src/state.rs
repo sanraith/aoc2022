@@ -17,6 +17,7 @@ use aoc::{
     util::YearDay,
 };
 use bracket_terminal::prelude::*;
+use itertools::Itertools;
 use rand::Rng;
 use std::{
     cell::RefCell,
@@ -35,25 +36,6 @@ pub struct UiState {
 impl GameState for UiState {
     fn tick(&mut self, ctx: &mut BTerm) {
         self.total_time += ctx.frame_time_ms;
-
-        // POC solution runner
-        if let Some(key) = ctx.key {
-            match key {
-                VirtualKeyCode::Return => {
-                    self.ui_text_manager.clear();
-                    let runner: Box<dyn SolutionRunner<LocalSyncStream>> =
-                        match JS_BRIDGE.lock().unwrap().worker_wrapper {
-                            Some(_) => Box::new(WasmRunner {}),
-                            None => Box::new(ThreadSolutionRunner {}),
-                        };
-                    self.solve_state = Some(runner.run(
-                        YearDay { year: 2022, day: 1 },
-                        aoc::core::solution_runner::Input::Default,
-                    ));
-                }
-                _ => (),
-            }
-        }
 
         let mut normal_batch = DrawBatch::new();
         normal_batch.target(0);
@@ -95,7 +77,37 @@ impl UiState {
     fn print_status(&self, ctx: &BTerm, batch: &mut DrawBatch) {
         batch.print(Point::from_tuple((1, 2)), "Advent of Code 2022");
         let status = format!("FPS: {:>2}", ctx.fps as i32);
-        batch.print(Point::from_tuple((1, 4)), status);
+        batch.print(Point::from_tuple((78, 1)), status);
+        let js_bridge = JS_BRIDGE.lock().unwrap();
+        if js_bridge.scale > 0.0 {
+            let scale = &format!("Scale: {:.2}", js_bridge.scale);
+            batch.print(Point::from_tuple((78, 2)), scale);
+        }
+
+        // Print start button
+        if let None = self.solve_state {
+            let button_lines = char_image::draw_text("Tap here", '#', ' ')
+                .into_iter()
+                .map(|l| format!("   {}", l))
+                .chain("\n".split("\n").map(|x| x.to_owned()))
+                .chain(char_image::draw_text("to start!", '#', ' ').into_iter())
+                .collect_vec();
+            let x_start = (self.config.borrow().width as i32
+                - button_lines.iter().map(|l| l.len()).max().unwrap() as i32)
+                / 2;
+            let y_start = (self.config.borrow().height as i32 - button_lines.len() as i32) / 2;
+            let button_lines = button_lines
+                .into_iter()
+                .map(|l| {
+                    l.chars()
+                        .map(|c| if c == '#' { '█' } else { c })
+                        .collect::<String>()
+                })
+                .collect_vec();
+            for (y, line) in button_lines.iter().enumerate() {
+                batch.print(Point::new(x_start, y_start + y as i32), line);
+            }
+        }
     }
 
     fn handle_mouse(&self, batch: &mut DrawBatch) {
@@ -139,6 +151,20 @@ impl UiState {
                 _ => (),
             };
         });
+
+        // Start solver via mouse click
+        if INPUT.lock().is_mouse_button_pressed(0) && self.solve_state.is_none() {
+            self.ui_text_manager.clear();
+            let runner: Box<dyn SolutionRunner<LocalSyncStream>> =
+                match JS_BRIDGE.lock().unwrap().worker_wrapper {
+                    Some(_) => Box::new(WasmRunner {}),
+                    None => Box::new(ThreadSolutionRunner {}),
+                };
+            self.solve_state = Some(runner.run(
+                YearDay { year: 2022, day: 1 },
+                aoc::core::solution_runner::Input::Default,
+            ));
+        }
 
         // Handle keyboard events from JS
         let js_unhandled_keys = JS_BRIDGE
@@ -244,10 +270,6 @@ impl UiState {
     fn handle_js_scale_changes(&mut self, normal_batch: &mut DrawBatch) {
         let js_bridge = js_interop::JS_BRIDGE.lock().unwrap();
         if js_bridge.scale > 0.0 {
-            normal_batch.print(
-                Point::from_tuple((1, 5)),
-                format!("Scale: {:.3}", js_bridge.scale),
-            );
             (*self.config.borrow_mut()).scale_x = js_bridge.scale as f32;
             (*self.config.borrow_mut()).scale_y = js_bridge.scale as f32;
         }

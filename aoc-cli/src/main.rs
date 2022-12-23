@@ -22,7 +22,7 @@ fn main() {
         .expect("config loaded or generated");
     let args = Args::parse();
 
-    aoc_ui::char_image::print_line("AOC 2022", '#', ' ');
+    aoc_ui::char_image::print_text("AOC 2022", '#', ' ');
     println!("--- Advent of Code 2022 CLI by sanraith ---");
 
     match args.mode {

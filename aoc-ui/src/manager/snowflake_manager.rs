@@ -14,7 +14,7 @@ use bracket_terminal::prelude::{BTerm, DrawBatch, PointF};
 use rand::{distributions::Uniform, prelude::Distribution, Rng};
 use std::{cell::RefCell, rc::Rc};
 
-const SNOWFLAKE_COUNT: usize = 500;
+const SNOWFLAKE_COUNT: usize = 1000;
 
 #[derive(PartialEq, Eq)]
 pub enum AnimatedItemKind {
@@ -57,13 +57,14 @@ impl SnowflakeManager {
         let Config { width, height, .. } = *self.config.borrow();
         let mut rng = rand::thread_rng();
         let width_die = Uniform::from(0.0..width as f32);
-        let height_die = Uniform::from(0.0..1.0);
+        let height_die = Uniform::from(-1.0..0.0);
         let height_starter_die = Uniform::from(0.0..height as f32);
         let snowflakes_count = SNOWFLAKE_COUNT;
         let height_die = match self.snowflakes.len() {
             0 => height_starter_die, // distribute flakes vertically initially
             _ => height_die,         // spawn new ones at the top
         };
+
         for _ in 0..snowflakes_count - self.snowflakes.len() {
             self.create_snowflake(&mut rng, width_die, height_die, width, height);
         }
@@ -85,6 +86,7 @@ impl SnowflakeManager {
                 },
                 scale: rng.gen_range(0.25..1.0),
                 rotation: rng.gen_range(0.0..180.0),
+                opaqueness: 0.5,
                 ..Default::default()
             },
         };
@@ -93,7 +95,7 @@ impl SnowflakeManager {
             d_sin_x: rng.gen_range(0.1..1.0),
             v_sin_x: rng.gen_range(0.2..0.7),
             vx: rng.gen_range(-1.5..1.5),
-            vy: rng.gen_range(2.0..8.0),
+            vy: rng.gen_range(5.0..12.0),
             v_rot: rng.gen_range(-180.0..180.0),
             max_x: max_x as f32,
             max_y: max_y as f32 + 1.0,
