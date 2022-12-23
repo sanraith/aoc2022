@@ -2,12 +2,11 @@ use crate::{solution::*, util::GenericResult};
 use derive_more::{Add, AddAssign, Constructor, Mul, MulAssign, Sub, SubAssign};
 use itertools::Itertools;
 use num::integer::Roots;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashMap, HashSet},
     hash::Hash,
-    ops::{Range, RangeInclusive},
+    ops::RangeInclusive,
 };
 
 static TILE_OPEN: char = '.';
@@ -20,17 +19,13 @@ static DIRECTIONS: [Point; 4] = [
     Point { x: 0, y: -1 },
 ];
 
-// side => [(neighbor_side, neighbor_side_rotation); 4] in the order of [R, D, L, U]
-static DICE: Lazy<HashMap<usize, [(usize, usize); 4]>> = Lazy::new(|| {
-    HashMap::from([
-        (1, [(3, 3), (5, 0), (4, 1), (2, 2)]),
-        (2, [(4, 0), (6, 2), (3, 0), (1, 2)]),
-        (3, [(2, 0), (6, 3), (5, 0), (1, 1)]),
-        (4, [(5, 0), (6, 1), (2, 0), (1, 3)]),
-        (5, [(3, 0), (6, 0), (4, 0), (1, 0)]),
-        (6, [(3, 1), (2, 2), (4, 3), (5, 0)]),
-    ])
-});
+static DIRECTIONS3: [Point3; 4] = [
+    // R, D, L, U; y is flipped
+    Point3 { x: 1, y: 0, z: 0 },
+    Point3 { x: 0, y: -1, z: 0 },
+    Point3 { x: -1, y: 0, z: 0 },
+    Point3 { x: 0, y: 1, z: 0 },
+];
 
 #[derive(Default)]
 pub struct Day22;
@@ -49,11 +44,69 @@ impl Solution for Day22 {
 
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
         let map = parse_input(ctx, WrapMode::Cube)?;
-        let (pos, facing) = walk(&map)?;
+        let (pos, facing) = walk_cube(&map, ctx)?;
         let password = (pos.y + 1) * 1000 + (pos.x + 1) * 4 + facing as i32;
 
         Ok(password.to_string())
     }
+}
+
+fn walk_cube(map: &Map, ctx: &Context) -> GenericResult<(Point, usize)> {
+    let mut cube = map.cube.clone();
+    let mut pos3 = cube
+        .get_3d_pos(&map.start.clone())
+        .ok_or("invalid 3d map")?;
+    let mut facing3 = 0;
+    let mut visited = Vec::new();
+
+    for (index, (facing_next, distance)) in map.path.iter().enumerate() {
+        ctx.progress(index as f32 / map.path.len() as f32);
+
+        facing3 = (facing3 + *facing_next) % 4;
+        let dir3 = DIRECTIONS3[facing3];
+
+        for _ in 0..*distance {
+            let cube_orig = cube.clone();
+            let mut next_pos3 = pos3 + dir3;
+
+            match next_pos3 {
+                p if p.x < 0 => {
+                    cube.rotate(rad(90), 0.0, 0.0);
+                    next_pos3.x = map.side_len - 1;
+                }
+                p if p.x >= map.side_len => {
+                    cube.rotate(rad(-90), 0.0, 0.0);
+                    next_pos3.x = 0;
+                }
+                p if p.y < 0 => {
+                    cube.rotate(0.0, rad(-90), 0.0);
+                    next_pos3.y = map.side_len - 1;
+                }
+                p if p.y >= map.side_len => {
+                    cube.rotate(0.0, rad(90), 0.0);
+                    next_pos3.y = 0;
+                }
+                _ => (),
+            };
+
+            let pos2 = *cube.tiles.get(&next_pos3).ok_or("invalid 3d map")?;
+            if *map.tiles.get(&pos2).ok_or("invalid 3d map")? == TILE_WALL {
+                cube = cube_orig;
+                break;
+            } else {
+                visited.push(pos2);
+                pos3 = next_pos3;
+            }
+        }
+    }
+
+    let pos2 = visited[visited.len() - 1];
+    let facing = DIRECTIONS
+        .iter()
+        .position(|&p| p == (pos2 - visited[visited.len() - 2]))
+        .ok_or("case when turning on the last tile is not handled")?;
+
+    Ok((pos2, facing))
 }
 
 fn walk(map: &Map) -> GenericResult<(Point, usize)> {
@@ -77,8 +130,6 @@ fn walk(map: &Map) -> GenericResult<(Point, usize)> {
     }
     visited.insert(pos, facing);
 
-    print_map(map, &visited);
-
     Ok((pos, facing))
 }
 
@@ -93,6 +144,7 @@ fn get_next_pos(start: Point, facing: usize, map: &Map) -> GenericResult<(Point,
     Ok((next_pos, facing_change))
 }
 
+#[allow(dead_code)]
 fn print_map(map: &Map, visited: &HashMap<Point, usize>) {
     println!("\nmap:");
     for y in 0..map.height {
@@ -103,7 +155,8 @@ fn print_map(map: &Map, visited: &HashMap<Point, usize>) {
                     0 => print!(">"),
                     1 => print!("v"),
                     2 => print!("<"),
-                    _ => print!("^"),
+                    3 => print!("^"),
+                    _ => print!("?"),
                 }
             } else {
                 match map.tiles.get(&p) {
@@ -181,7 +234,7 @@ fn parse_input(ctx: &Context, mode: WrapMode) -> GenericResult<Map> {
     };
     match mode {
         WrapMode::Flat => add_flat_portals(&mut map, &ranges_x, &ranges_y),
-        WrapMode::Cube => add_cube_portals(&mut map)?,
+        WrapMode::Cube => add_cube(&mut map)?,
     };
 
     Ok(map)
@@ -204,7 +257,7 @@ fn add_flat_portals(
     }
 }
 
-fn add_cube_portals(map: &mut Map) -> GenericResult {
+fn add_cube(map: &mut Map) -> GenericResult {
     // find position of sides within the tile map
     let mut sides = Vec::new();
     for y in 0..(map.height / map.side_len) {
@@ -216,272 +269,58 @@ fn add_cube_portals(map: &mut Map) -> GenericResult {
         }
     }
 
-    // identify sides by their number on the dice and save 0 rotation connections
-    let start = sides.iter().next().ok_or("invalid input")?;
-    let mut queue = VecDeque::from([(*start, (1, 0))]);
-    let mut side_map = HashMap::from([(*start, (1, 0))]);
-    let mut side_rotation_map: HashMap<(usize, usize), i32> = HashMap::new();
-    while let Some((pos, (side, rot))) = queue.pop_front() {
-        let neighbors = DICE.get(&side).ok_or("invalid dice")?;
-        for (dir_idx, (next_side, next_rot)) in neighbors.iter().enumerate() {
-            let next_pos = pos + DIRECTIONS[(dir_idx + rot) % 4];
-            if sides.contains(&next_pos) && !side_map.contains_key(&next_pos) {
-                side_map.insert(next_pos, (*next_side, *next_rot));
-                queue.push_back((next_pos, (*next_side, *next_rot)));
-                side_rotation_map.insert((side, *next_side), 0);
-                side_rotation_map.insert((*next_side, side), 0);
-            }
-        }
-    }
+    // map sides to cube
+    let start = sides[0].clone();
+    let sides_map: HashSet<Point> = HashSet::from_iter(sides);
+    let mut cube = Cube {
+        side_len: map.side_len,
+        ..Default::default()
+    };
+    fill_cube(&start, &sides_map, &mut HashSet::new(), &mut cube, &map);
 
-    // find out relative rotations
-    for (a, b) in itertools::iproduct!(1..=6, 1..=6).filter(|(a, b)| a != b) {
-        if side_rotation_map.contains_key(&(a, b)) {
-            continue; // already covered
-        }
-        if DICE
-            .get(&a)
-            .ok_or("err")?
-            .iter()
-            .all(|(side, _)| *side != b)
-        {
-            continue; // not neighbors
-        }
-
-        // println!("{} {}", a, b);
-        let pos_a = side_map
-            .iter()
-            .find(|(_, (s, _))| *s == a)
-            .map(|(k, _)| k)
-            .ok_or("err")?;
-        let pos_b = side_map
-            .iter()
-            .find(|(_, (s, _))| *s == b)
-            .map(|(k, _)| k)
-            .ok_or("err")?;
-
-        let rotation = get_relative_rotation(&sides, &pos_a, &pos_b); // (400 + (pos_a.manhattan(pos_b) - 1) * (pos_a.x - pos_b.x).signum()) % 4;
-        side_rotation_map.insert((a, b), rotation);
-    }
-
-    println!("\nCube shape:");
-    for y in 0..4 {
-        for x in 0..4 {
-            let c = match side_map.get(&Point::new(x, y)) {
-                Some((side, _rot)) => side.to_string(),
-                None => " ".to_owned(),
-            };
-            print!("{}", c)
-        }
-        println!();
-    }
-
-    // generate portals based on relative rotations
-    for (pos_a, (side_a, _)) in side_map.iter().collect_vec() {
-        for (dir_idx, (side_b, _)) in DICE.get(&side_a).ok_or("err")?.iter().enumerate() {
-            let pos_b = side_map
-                .iter()
-                .find(|(k, (s, _))| s == side_b)
-                .map(|(k, _)| k)
-                .ok_or("err")?;
-
-            let rot = (4 + get_relative_rotation(&sides, &pos_a, &pos_b)) % 4;
-            // ((400 + (pos_a.manhattan(pos_b) - 1) * (pos_a.x - pos_b.x).signum()) % 4) as usize;
-            let edge_from = dir_idx;
-            let edge_to = (dir_idx as i32 + 2 + rot) as usize % 4;
-
-            let points_a = edge_ranges(map, &pos_a, edge_from)?;
-            let points_a = itertools::iproduct!(points_a.0, points_a.1)
-                .map(|(x, y)| Point::new(x, y))
-                .collect_vec();
-            let points_b = edge_ranges(map, &pos_b, edge_to)?;
-            let mut points_b = itertools::iproduct!(points_b.0, points_b.1)
-                .map(|(x, y)| Point::new(x, y))
-                .collect_vec();
-
-            // if *side_a == 4 && *side_b == 1 {
-            //     println!(
-            //         "\n{} {} {}",
-            //         (pos_a.manhattan(pos_b) - 1),
-            //         (pos_b.x - pos_a.x).signum(),
-            //         ((400 + (pos_a.manhattan(pos_b) - 1) * (pos_b.x - pos_a.x).signum()) % 4)
-            //     );
-            //     println!("{}", rot);
-            //     println!("{:?}", points_b);
-            // }
-
-            // match (edge_from, edge_to) {
-            //     // (0, 0) => points_b.reverse(),
-            //     (0, 1) => points_b.reverse(),
-            //     (0, 2) => (),
-            //     // (0, 3) => points_b.reverse(),
-            //     // (1, 0) => (),
-            //     // (1, 1) => points_b.reverse(),
-            //     (1, 2) => points_b.reverse(),
-            //     (1, 3) => (),
-            //     // (2, 0) => (),
-            //     // (2, 1) => (),
-            //     // (2, 2) => (),
-            //     // (2, 3) => (),
-            //     // (3, 0) => (),
-            //     // (3, 1) => (),
-            //     // (3, 2) => (),
-            //     // (3, 3) => (),
-
-            //     // TODO
-            //     _ => Err(format!(
-            //         "i don't know e{}->{} s{}->{}",
-            //         edge_from, edge_to, side_a, side_b
-            //     ))?,
-            // };
-
-            // if points_a[0].y < points_b[0].y {
-            //     points_b.reverse();
-            // }
-            match rot {
-                0 | 3 => (),
-                2 | 1 => points_b.reverse(),
-                _ => Err("invalid rotation")?,
-            }
-            // if *side_a == 4 && *side_b == 1 {
-            //     println!("{:?}", points_b);
-            // }
-
-            for (idx, point_a) in points_a.into_iter().enumerate() {
-                let point_a = point_a + DIRECTIONS[dir_idx];
-                if map.tiles.get(&point_a).is_some() {
-                    continue;
-                }
-
-                let point_b = points_b[idx];
-                // if *side_a == 4 && *side_b == 1 {
-                //     println!(" {:?}->{:?}", point_a, point_b);
-                // }
-                let prev = match dir_idx {
-                    0 | 2 => map.portals_h.insert(point_a, (point_b, rot as i32)),
-                    1 | 3 => map.portals_v.insert(point_a, (point_b, rot as i32)),
-                    _ => Err("invalid direction")?,
-                };
-                if prev.is_some() {
-                    Err("not good")?;
-                }
-            }
-        }
-    }
-
-    println!(
-        "{:#?}",
-        side_rotation_map
-            .iter()
-            .map(|((a, b), r)| format!("{}->{} rot: {}", a, b, r))
-            .collect_vec()
-    );
-
-    // println!("\nmap:");
-    // for y in -1..map.height + 1 {
-    //     for x in -1..map.width + 1 {
-    //         let p = Point::new(x, y);
-
-    //         match map.tiles.get(&p) {
-    //             Some(c) => print!("{}", c),
-    //             None => print!(" "),
-    //         }
-    //     }
-    //     println!();
-    // }
-
-    // println!("\nmap with portals:");
-    // for y in -1..map.height + 1 {
-    //     for x in -1..map.width + 1 {
-    //         let p = Point::new(x, y);
-    //         let mut portal_count = if map.portals_h.contains_key(&p) { 1 } else { 0 };
-    //         portal_count += if map.portals_v.contains_key(&p) { 1 } else { 0 };
-    //         if portal_count > 0 {
-    //             print!("{}", portal_count);
-    //         } else {
-    //             match map.tiles.get(&p) {
-    //                 Some(c) => print!("{}", c),
-    //                 None => print!(" "),
-    //             }
-    //         }
-    //     }
-    //     println!();
-    // }
-
-    // println!(
-    //     "{:#?}",
-    //     side_map
-    //         .iter()
-    //         .map(|(p, (a, b))| format!("({}, {}) side: {}, rot: {}", p.x, p.y, a, b))
-    //         .collect_vec()
-    // );
-    // println!(
-    //     "{:#?}",
-    //     side_rotation_map
-    //         .iter()
-    //         .map(|((a, b), v)| format!("{}->{}: {}", a, b, v))
-    //         .collect_vec()
-    // );
-
+    map.cube = cube;
     Ok(())
 }
 
-fn get_relative_rotation(sides: &Vec<Point>, a: &Point, b: &Point) -> i32 {
-    let sides: HashSet<Point> = HashSet::from_iter(sides.clone());
-    let mut hor: i32 = 0;
-    let mut ver: i32 = 0;
-    let mut visited = HashSet::from([*a]);
-    let mut queue = VecDeque::from([(*a, 0, 0)]);
-
-    // let rotation_by_side
-
-    while let Some((p, _hor, _ver)) = queue.pop_front() {
-        if p == *b {
-            hor = _hor;
-            ver = _ver;
-            break;
-        }
-
-        for (dir_idx, dir) in DIRECTIONS.iter().enumerate() {
-            let mut _hor = _hor;
-            let mut _ver = _ver;
-            let next = p + *dir;
-            match dir_idx {
-                0 | 2 => _hor += (dir_idx as i32 - 1) * 90,
-                1 | 3 => _ver += (dir_idx as i32 - 2) * 90,
-                _ => (),
-            };
-
-            if sides.contains(&next) && visited.insert(next) {
-                queue.push_back((next, _hor, _ver));
-            }
+fn fill_cube(
+    side: &Point,
+    sides: &HashSet<Point>,
+    visited: &mut HashSet<Point>,
+    cube: &mut Cube,
+    map: &Map,
+) {
+    for y in side.y * cube.side_len..side.y * cube.side_len + cube.side_len {
+        for x in side.x * cube.side_len..side.x * cube.side_len + cube.side_len {
+            let from = Point::new(x, y);
+            let to = Point3::new(
+                x - side.x * cube.side_len,
+                map.side_len - 1 - (y - side.y * cube.side_len), // flip y
+                1,
+            );
+            cube.tiles.insert(to, from);
         }
     }
 
-    ver + hor
-}
-
-fn edge_ranges(
-    map: &Map,
-    side_pos: &Point,
-    edge: usize,
-) -> GenericResult<(Range<i32>, Range<i32>)> {
-    let p = *side_pos * map.side_len;
-    let n = map.side_len;
-    let (range_x, range_y) = match edge {
-        0 => (p.x + n - 1..p.x + n, p.y..p.y + n),
-        1 => (p.x..p.x + n, p.y + n - 1..p.y + n),
-        2 => (p.x..p.x + 1, p.y..p.y + n),
-        3 => (p.x..p.x + n, p.y..p.y + 1),
-        _ => Err("invalid edge")?,
-    };
-
-    Ok((range_x, range_y))
+    for (dir_idx, dir) in DIRECTIONS.iter().enumerate() {
+        let next_side = *side + *dir;
+        if visited.insert(next_side) && sides.contains(&next_side) {
+            match dir_idx {
+                0 | 2 => cube.rotate(rad((dir_idx as i32 - 1) * 90), 0.0, 0.0),
+                _ => cube.rotate(0.0, rad((dir_idx as i32 - 2) * 90), 0.0),
+            }
+            fill_cube(&next_side, sides, visited, cube, map);
+            match dir_idx {
+                0 | 2 => cube.rotate(rad((dir_idx as i32 - 1) * -90), 0.0, 0.0),
+                _ => cube.rotate(0.0, rad((dir_idx as i32 - 2) * -90), 0.0),
+            }
+        }
+    }
 }
 
 #[derive(Debug, Default)]
 struct Map {
     start: Point,
+    cube: Cube,
     tiles: HashMap<Point, char>,
     width: i32,
     height: i32,
@@ -491,33 +330,112 @@ struct Map {
     portals_v: HashMap<Point, (Point, i32)>,
 }
 
+#[derive(Debug, Default, Clone)]
+struct Cube {
+    side_len: i32,
+    tiles: HashMap<Point3, Point>,
+}
+impl Cube {
+    fn get_3d_pos(&self, p: &Point) -> Option<Point3> {
+        self.tiles.iter().find(|(_, &p2)| p2 == *p).map(|x| *x.0)
+    }
+
+    #[allow(non_snake_case)]
+    fn rotate(&mut self, pitch: f32, roll: f32, yaw: f32) {
+        let cosa = yaw.cos();
+        let sina = yaw.sin();
+        let cosb = pitch.cos();
+        let sinb = pitch.sin();
+        let cosc = roll.cos();
+        let sinc = roll.sin();
+        let Axx = cosa * cosb;
+        let Axy = cosa * sinb * sinc - sina * cosc;
+        let Axz = cosa * sinb * cosc + sina * sinc;
+        let Ayx = sina * cosb;
+        let Ayy = sina * sinb * sinc + cosa * cosc;
+        let Ayz = sina * sinb * cosc - cosa * sinc;
+        let Azx = -sinb;
+        let Azy = cosb * sinc;
+        let Azz = cosb * cosc;
+
+        let t = Point3F::new(
+            (self.side_len as f32 - 1.0) / -2.0,
+            (self.side_len as f32 - 1.0) / -2.0,
+            (self.side_len as f32 - 1.0) / 2.0,
+        );
+
+        // translate
+        let tiles_f = self.tiles.drain().map(|(p, c)| (Point3F::from(p) + t, c));
+
+        // rotate
+        let tiles_f = tiles_f.map(|(p, c)| {
+            let p2 = Point3F::new(
+                Axx * p.x + Axy * p.y + Axz * p.z,
+                Ayx * p.x + Ayy * p.y + Ayz * p.z,
+                Azx * p.x + Azy * p.y + Azz * p.z,
+            );
+            (p2, c)
+        });
+
+        // translate back
+        self.tiles = HashMap::from_iter(tiles_f.map(|(p, c)| (Point3::from(p - t), c)));
+    }
+
+    #[allow(dead_code)]
+    fn print_coords(&self, map: &Map, tile: char) {
+        let coords = self
+            .tiles
+            .iter()
+            .filter(|(_, p2)| *map.tiles.get(&p2).unwrap_or(&TILE_OPEN) == tile)
+            .map(|(p1, _)| p1)
+            .collect_vec();
+        println!("x=[{}]", coords.iter().map(|p| p.x).join(", "));
+        println!("y=[{}]", coords.iter().map(|p| p.y).join(", "));
+        println!("z=[{}]", coords.iter().map(|p| p.z).join(", "));
+    }
+}
+
+fn rad(deg: i32) -> f32 {
+    (deg as f32).to_radians()
+}
+
 enum WrapMode {
     Flat,
     Cube,
 }
 
 #[derive(
-    Copy,
-    Clone,
-    Debug,
-    Default,
-    Hash,
-    PartialEq,
-    Eq,
-    Constructor,
-    Add,
-    Sub,
-    Mul,
-    AddAssign,
-    SubAssign,
-    MulAssign,
+    Copy, Clone, Debug, Default, Hash, PartialEq, Eq, Constructor, Add, Sub, AddAssign, SubAssign,
 )]
 struct Point {
     pub x: i32,
     pub y: i32,
 }
-impl Point {
-    pub fn manhattan(&self, other: &Point) -> i32 {
-        (self.x - other.x).abs() + (self.y - other.y).abs()
+
+#[derive(
+    Copy, Clone, Debug, Default, Hash, PartialEq, Eq, Constructor, Add, Sub, AddAssign, SubAssign,
+)]
+struct Point3 {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+impl From<Point3F> for Point3 {
+    fn from(p: Point3F) -> Self {
+        Point3::new(p.x.round() as i32, p.y.round() as i32, p.z.round() as i32)
+    }
+}
+
+#[derive(
+    Copy, Clone, Debug, Default, Constructor, Add, Sub, Mul, AddAssign, SubAssign, MulAssign,
+)]
+struct Point3F {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+impl From<Point3> for Point3F {
+    fn from(p: Point3) -> Self {
+        Point3F::new(p.x as f32, p.y as f32, p.z as f32)
     }
 }

@@ -48,6 +48,7 @@ impl Solution for Day23 {
         let mut move_count = 1;
         let mut round = 0;
         while move_count > 0 {
+            ctx.progress(round as f32 / 1000.0);
             (map, move_count) = execute_round(map, round);
             round += 1;
         }

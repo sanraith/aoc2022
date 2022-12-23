@@ -29,5 +29,5 @@ fn example_input() {
 fn puzzle_input() {
     let (mut day, ctx) = setup_from_file::<Day22>();
     assert_result(day.part1(&ctx), "162186", "solve part 1");
-    //assert_result(day.part2(&ctx), "day22_part2", "solve part 2");
+    assert_result(day.part2(&ctx), "55267", "solve part 2");
 }
