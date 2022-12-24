@@ -1,6 +1,7 @@
 use crate::{solution::*, util::GenericResult};
 use derive_more::{Add, AddAssign, Constructor, Sub, SubAssign};
-use std::collections::{HashMap, VecDeque};
+use priority_queue::PriorityQueue;
+use std::collections::HashMap;
 
 const TILE_WALL: char = '#';
 const TILE_EMPTY: char = '.';
@@ -10,6 +11,13 @@ const DIRECTIONS: [Point; 4] = [
     Point { x: 0, y: 1 },  // South
     Point { x: -1, y: 0 }, // West
     Point { x: 0, y: -1 }, // North
+];
+const DIRECTIONS_AND_STAY: [Point; 5] = [
+    Point { x: 1, y: 0 },  // East
+    Point { x: 0, y: 1 },  // South
+    Point { x: -1, y: 0 }, // West
+    Point { x: 0, y: -1 }, // North
+    Point { x: 0, y: 0 },  // No
 ];
 
 #[derive(Default)]
@@ -22,7 +30,7 @@ impl Solution for Day24 {
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
         let map = parse_map(ctx)?;
         let time = bfs(&map).ok_or("could not find path")?;
-        Ok(time.to_string())
+        Ok(time.to_string()) // 370 too high
     }
 
     fn part2(&mut self, _ctx: &Context) -> SolutionResult {
@@ -31,40 +39,30 @@ impl Solution for Day24 {
 }
 
 fn bfs(map: &Map) -> Option<i32> {
-    let mut map = map.clone();
-    let mut max_time = -1;
-    let mut queue = VecDeque::from([(0, map.start)]);
-    // map.print();
-    while let Some((time, pos)) = queue.pop_front() {
-        if time > max_time {
-            move_blizzards(&mut map);
-            // map.print();
-            max_time = time;
-        }
+    let mut blizzards_at = HashMap::from([(0, map.blizzards.clone())]);
+    let mut queue = PriorityQueue::new();
+    queue.push((1, map.start), -map.start.manhattan(&map.goal));
 
-        let queue_before = queue.len();
-        for dir in DIRECTIONS {
-            let next_pos = pos + dir;
-            if map.blizzards.get(&next_pos).is_none() {
-                if let Some(&TILE_EMPTY) = map.tiles.get(&next_pos) {
-                    if next_pos == map.goal {
-                        return Some(time + 1);
-                    }
-
-                    queue.push_back((time + 1, next_pos));
-                }
+    while let Some(((time, pos), _priority)) = queue.pop() {
+        let next_blizzards = match blizzards_at.get(&time) {
+            Some(blizzards) => blizzards,
+            None => {
+                let blizzards = move_blizzards(&map, blizzards_at.get(&(time - 1)).unwrap());
+                blizzards_at.insert(time, blizzards);
+                blizzards_at.get(&time).unwrap()
             }
-        }
+        };
 
-        if queue.len() == queue_before {
-            let next_pos = pos;
-            if map.blizzards.get(&next_pos).is_none() {
+        for dir in DIRECTIONS_AND_STAY {
+            let next_pos = pos + dir;
+            if next_blizzards.get(&next_pos).is_none() {
                 if let Some(&TILE_EMPTY) = map.tiles.get(&next_pos) {
                     if next_pos == map.goal {
-                        return Some(time + 1);
+                        return Some(time);
                     }
 
-                    queue.push_back((time + 1, next_pos));
+                    // queue.push_back((time + 1, next_pos));
+                    queue.push((time + 1, next_pos), -next_pos.manhattan(&map.goal) - time);
                 }
             }
         }
@@ -73,22 +71,22 @@ fn bfs(map: &Map) -> Option<i32> {
     None
 }
 
-fn move_blizzards(mut map: &mut Map) {
+fn move_blizzards(map: &Map, blizzards: &HashMap<Point, Vec<usize>>) -> HashMap<Point, Vec<usize>> {
     let mut next = HashMap::new();
-    for (pos, blizzards_at_pos) in map.blizzards.drain() {
+    for (pos, blizzards_at_pos) in blizzards {
         for blizzard in blizzards_at_pos {
-            let dir = DIRECTIONS[blizzard];
+            let dir = DIRECTIONS[*blizzard];
             let next_pos = Point::new(
                 (pos.x + dir.x + map.width as i32) % map.width as i32,
                 (pos.y + dir.y + map.height as i32) % map.height as i32,
             );
             next.entry(next_pos)
                 .or_insert_with(|| Vec::new())
-                .push(blizzard);
+                .push(*blizzard);
         }
     }
 
-    map.blizzards = next;
+    next
 }
 
 fn parse_map(ctx: &Context) -> GenericResult<Map> {
@@ -161,6 +159,7 @@ struct Map {
     blizzards: HashMap<Point, Vec<usize>>,
 }
 impl Map {
+    #[allow(dead_code)]
     fn print(&self) {
         println!();
         for y in -1..self.height as i32 + 1 {
@@ -190,11 +189,7 @@ struct Point {
     pub y: i32,
 }
 impl Point {
-    pub fn min_parts(&self, b: Point) -> Point {
-        Point::new(self.x.min(b.x), self.y.min(b.y))
-    }
-
-    pub fn max_parts(&self, b: Point) -> Point {
-        Point::new(self.x.max(b.x), self.y.max(b.y))
+    pub fn manhattan(&self, other: &Point) -> i32 {
+        (self.x - other.x).abs() + (self.y - other.y).abs()
     }
 }
