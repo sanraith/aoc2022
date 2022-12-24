@@ -4,6 +4,7 @@ use aoc::{
     helpers::AsSome,
     util::YearDay,
 };
+use bracket_terminal::prelude::PointF;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -31,6 +32,13 @@ impl Deref for WorkerScopeWrapper {
     }
 }
 
+pub enum TouchKind {
+    Start,
+    Move,
+    End,
+    Cancel,
+}
+
 #[derive(Serialize, Deserialize)]
 pub enum WorkerCommand {
     StartDay(YearDay, Input),
@@ -40,6 +48,7 @@ pub enum WorkerCommand {
 pub struct JsBridge {
     pub scale: f64,
     pub unhandled_keys: Vec<String>,
+    pub unhandled_touches: Vec<(PointF, TouchKind)>,
     pub worker_tx: Option<Arc<Mutex<LocalSyncStream>>>,
     pub worker_wrapper: Option<WorkerWrapper>,
     pub worker_scope_wrapper: Option<WorkerScopeWrapper>,
@@ -116,6 +125,25 @@ pub fn set_scale(scale: JsValue) {
 pub fn push_key_event(key: JsValue) {
     let key = key.as_string().unwrap();
     JS_BRIDGE.lock().unwrap().unhandled_keys.push(key);
+}
+
+#[wasm_bindgen]
+pub fn push_touch_event(x: JsValue, y: JsValue, kind: JsValue) {
+    let x = x.as_f64().unwrap();
+    let y = y.as_f64().unwrap();
+    let kind = match kind.as_string().unwrap().as_str() {
+        "touchstart" => TouchKind::Start,
+        "touchend" => TouchKind::End,
+        "touchcancel" => TouchKind::Cancel,
+        "touchmove" => TouchKind::Move,
+        _ => return,
+    };
+
+    JS_BRIDGE
+        .lock()
+        .unwrap()
+        .unhandled_touches
+        .push((PointF::new(x as f32, y as f32), kind));
 }
 
 #[wasm_bindgen]

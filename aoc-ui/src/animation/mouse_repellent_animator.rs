@@ -14,7 +14,7 @@ pub struct MouseRepellentAnimator {
 impl<T: Drawable> Animator<T> for MouseRepellentAnimator {
     fn tick(&mut self, ctx: &BTerm, target: &mut T) {
         let elapsed_seconds = ctx.frame_time_ms / 1000.0;
-        let mouse_active = match INPUT.lock().mouse_pixel_pos() {
+        let mouse_active = match self.config.borrow().mouse {
             (x, y) if x > 0.0 && y > 0.0 => true,
             _ => false,
         };

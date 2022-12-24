@@ -33,11 +33,16 @@ impl TypedLineAnimation {
         self.elapsed += ctx.frame_time_ms;
 
         let eased_progress = ease_progress(self.progress(), &self.ease_type);
-        let drawn_text = self
-            .text
-            .chars()
-            .take((eased_progress * self.text.len() as f32) as usize)
-            .collect::<String>();
+        let drawn_text = match self.progress() {
+            p if p >= 1.0 => self.text.to_owned(),
+            _ => {
+                self.text
+                    .chars()
+                    .take((eased_progress * self.text.len() as f32) as usize)
+                    .collect::<String>()
+                    + "█"
+            }
+        };
         batch.print_color(
             Point::new(self.base.pos.x as i32, self.base.pos.y as i32),
             drawn_text,
