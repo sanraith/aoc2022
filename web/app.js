@@ -45,6 +45,8 @@ function onResize(rust) {
     console.log(width / targetWidth);
 }
 
+const ongoing_touches = new Set();
+
 /** 
  * @param {typeof import('./pkg')} rust
  * @param {TouchEvent} event 
@@ -54,13 +56,25 @@ function handleTouch(rust, event) {
         return;
     }
 
+    if (event.type == 'touchstart') {
+        for (let t of event.changedTouches) {
+            ongoing_touches.add(t.identifier);
+        }
+    } else if (event.type == 'touchend' || event.type == 'touchcancel') {
+        for (let t of event.changedTouches) {
+            ongoing_touches.delete(t.identifier);
+        }
+    }
+
     const rect = document.getElementById('canvas').getBoundingClientRect();
     const touch = event.changedTouches[0];
     let x = touch.pageX - rect.left;
     let y = touch.pageY - rect.top;
 
     rust.push_touch_event(x, y, event.type);
-    event.preventDefault();
+    if (ongoing_touches.size < 2) {
+        event.preventDefault();
+    }
 }
 
 /**
