@@ -1,7 +1,8 @@
 use crate::{solution::*, util::GenericResult};
 use derive_more::{Add, AddAssign, Constructor, Sub, SubAssign};
+use itertools::Itertools;
 use priority_queue::PriorityQueue;
-use std::collections::HashMap;
+use std::{collections::HashMap, hash::Hash};
 
 const TILE_WALL: char = '#';
 const TILE_EMPTY: char = '.';
@@ -12,12 +13,12 @@ const DIRECTIONS: [Point; 4] = [
     Point { x: -1, y: 0 }, // West
     Point { x: 0, y: -1 }, // North
 ];
-const DIRECTIONS_AND_STAY: [Point; 5] = [
+const DIRECTIONS_WITH_STAY: [Point; 5] = [
     Point { x: 1, y: 0 },  // East
     Point { x: 0, y: 1 },  // South
     Point { x: -1, y: 0 }, // West
     Point { x: 0, y: -1 }, // North
-    Point { x: 0, y: 0 },  // No
+    Point { x: 0, y: 0 },  // Stay
 ];
 
 #[derive(Default)]
@@ -29,39 +30,56 @@ impl Solution for Day24 {
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
         let map = parse_map(ctx)?;
-        let time = bfs(&map).ok_or("could not find path")?;
-        Ok(time.to_string()) // 370 too high
+        let time = bfs(&map, &map.start, &map.goal, 0, &mut HashMap::new())
+            .ok_or("could not find path")?;
+        Ok(time.to_string())
     }
 
-    fn part2(&mut self, _ctx: &Context) -> SolutionResult {
-        Err(NotImplementedError)?
+    fn part2(&mut self, ctx: &Context) -> SolutionResult {
+        let map = parse_map(ctx)?;
+
+        let err = "could not find path";
+        let mut blizzards_at = HashMap::new();
+        ctx.progress(0.01);
+        let time = bfs(&map, &map.start, &map.goal, 0, &mut blizzards_at).ok_or(err)?;
+        ctx.progress(0.3333);
+        let time = bfs(&map, &map.goal, &map.start, time, &mut blizzards_at).ok_or(err)?;
+        ctx.progress(0.6666);
+        let time = bfs(&map, &map.start, &map.goal, time, &mut blizzards_at).ok_or(err)?;
+
+        Ok(time.to_string())
     }
 }
 
-fn bfs(map: &Map) -> Option<i32> {
-    let mut blizzards_at = HashMap::from([(0, map.blizzards.clone())]);
+fn bfs(
+    map: &Map,
+    start: &Point,
+    goal: &Point,
+    elapsed: i32,
+    blizzards_at: &mut HashMap<i32, HashMap<Point, Vec<usize>>>,
+) -> Option<i32> {
+    blizzards_at.insert(0, map.starting_blizzards.clone());
     let mut queue = PriorityQueue::new();
-    queue.push((1, map.start), -map.start.manhattan(&map.goal));
+    queue.push((elapsed, *start), -map.start.manhattan(&map.goal));
 
     while let Some(((time, pos), _priority)) = queue.pop() {
-        let next_blizzards = match blizzards_at.get(&time) {
+        if pos == *goal {
+            return Some(time);
+        }
+
+        let next_blizzards = match blizzards_at.get(&(time + 1)) {
             Some(blizzards) => blizzards,
             None => {
-                let blizzards = move_blizzards(&map, blizzards_at.get(&(time - 1)).unwrap());
-                blizzards_at.insert(time, blizzards);
-                blizzards_at.get(&time).unwrap()
+                let blizzards = move_blizzards(&map, blizzards_at.get(&time).unwrap());
+                blizzards_at.insert(time + 1, blizzards);
+                blizzards_at.get(&(time + 1)).unwrap()
             }
         };
 
-        for dir in DIRECTIONS_AND_STAY {
+        for dir in DIRECTIONS_WITH_STAY {
             let next_pos = pos + dir;
             if next_blizzards.get(&next_pos).is_none() {
                 if let Some(&TILE_EMPTY) = map.tiles.get(&next_pos) {
-                    if next_pos == map.goal {
-                        return Some(time);
-                    }
-
-                    // queue.push_back((time + 1, next_pos));
                     queue.push((time + 1, next_pos), -next_pos.manhattan(&map.goal) - time);
                 }
             }
@@ -90,9 +108,11 @@ fn move_blizzards(map: &Map, blizzards: &HashMap<Point, Vec<usize>>) -> HashMap<
 }
 
 fn parse_map(ctx: &Context) -> GenericResult<Map> {
+    let input = ctx.input();
+    let lines = input.lines().collect_vec();
     let mut tiles = HashMap::new();
     let mut blizzards = HashMap::new();
-    for (y, line) in ctx.input().lines().enumerate() {
+    for (y, line) in lines.iter().enumerate() {
         for (x, c) in line.chars().enumerate() {
             let p = Point::new(x as i32 - 1, y as i32 - 1);
             match c {
@@ -112,32 +132,16 @@ fn parse_map(ctx: &Context) -> GenericResult<Map> {
         }
     }
 
-    let width = ctx
-        .input()
-        .lines()
-        .next()
-        .and_then(|x| Some(x.len()))
-        .unwrap_or(2)
-        - 2;
-    let height = ctx.input().lines().count() - 2;
+    let height = lines.len() - 2;
+    let width = lines.get(0).ok_or("no input available")?.len() - 2;
     let start = (0..width)
         .map(|x| Point::new(x as i32, -1))
-        .find(|p| {
-            tiles
-                .get(p)
-                .and_then(|c| Some(*c == TILE_EMPTY))
-                .unwrap_or(false)
-        })
+        .find(|p| *tiles.get(p).unwrap() == TILE_EMPTY)
         .ok_or("could not find start")?;
     let goal = (0..width)
         .map(|x| Point::new(x as i32, height as i32))
-        .find(|p| {
-            tiles
-                .get(p)
-                .and_then(|c| Some(*c == TILE_EMPTY))
-                .unwrap_or(false)
-        })
-        .ok_or("could not find goal")?;
+        .find(|p| *tiles.get(p).unwrap() == TILE_EMPTY)
+        .ok_or("could not find start")?;
 
     Ok(Map {
         width,
@@ -145,7 +149,7 @@ fn parse_map(ctx: &Context) -> GenericResult<Map> {
         start,
         goal,
         tiles,
-        blizzards,
+        starting_blizzards: blizzards,
     })
 }
 
@@ -156,7 +160,7 @@ struct Map {
     start: Point,
     goal: Point,
     tiles: HashMap<Point, char>,
-    blizzards: HashMap<Point, Vec<usize>>,
+    starting_blizzards: HashMap<Point, Vec<usize>>,
 }
 impl Map {
     #[allow(dead_code)]
@@ -165,7 +169,7 @@ impl Map {
         for y in -1..self.height as i32 + 1 {
             for x in -1..self.width as i32 + 1 {
                 let p = Point::new(x, y);
-                match self.blizzards.get(&p) {
+                match self.starting_blizzards.get(&p) {
                     Some(blizzards) => match blizzards.len() {
                         1 => print!("{}", TILE_BLIZZARDS[blizzards[0]]),
                         _ => print!("{}", blizzards.len().min(9)),

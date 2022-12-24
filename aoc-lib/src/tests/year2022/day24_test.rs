@@ -14,12 +14,12 @@ fn example_input() {
 ######.#"#,
     );
     assert_result(day.part1(&ctx), "18", "solve part 1");
-    //assert_result(day.part2(&ctx), "day24_part2", "solve part 2");
+    assert_result(day.part2(&ctx), "54", "solve part 2");
 }
 
 #[test]
 fn puzzle_input() {
     let (mut day, ctx) = setup_from_file::<Day24>();
     assert_result(day.part1(&ctx), "288", "solve part 1");
-    //assert_result(day.part2(&ctx), "day24_part2", "solve part 2");
+    assert_result(day.part2(&ctx), "861", "solve part 2");
 }
