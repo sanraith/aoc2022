@@ -6,6 +6,7 @@ pub struct Config {
     pub tile_size_y: u32,
     pub scale_x: f32,
     pub scale_y: f32,
+    pub mouse: (f32, f32),
 }
 
 pub fn default() -> Config {
@@ -16,5 +17,6 @@ pub fn default() -> Config {
         tile_size_y: 16,
         scale_x: 1.0,
         scale_y: 1.0,
+        mouse: (0.0, 0.0),
     }
 }

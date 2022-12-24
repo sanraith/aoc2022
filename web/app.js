@@ -45,6 +45,24 @@ function onResize(rust) {
     console.log(width / targetWidth);
 }
 
+/** 
+ * @param {typeof import('./pkg')} rust
+ * @param {TouchEvent} event 
+ * */
+function handleTouch(rust, event) {
+    if (!event.changedTouches || event.changedTouches.length === 0) {
+        return;
+    }
+
+    const rect = document.getElementById('canvas').getBoundingClientRect();
+    const touch = event.changedTouches[0];
+    let x = touch.pageX - rect.left;
+    let y = touch.pageY - rect.top;
+
+    rust.push_touch_event(x, y, event.type);
+    event.preventDefault();
+}
+
 /**
  * Registers handlers for key events to forward to the rust code.
  * @param {typeof import('./pkg')} rust
@@ -63,6 +81,12 @@ function registerKeyHandlers(rust) {
             event.preventDefault();
         }
     }, false);
+
+    const canvas = document.getElementById('canvas');
+    canvas.addEventListener('touchstart', event => handleTouch(rust, event));
+    canvas.addEventListener('touchend', event => handleTouch(rust, event));
+    canvas.addEventListener('touchmove', event => handleTouch(rust, event));
+    canvas.addEventListener('touchcancel', event => handleTouch(rust, event));
 }
 
 async function initWorker() {

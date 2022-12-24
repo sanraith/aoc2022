@@ -1,7 +1,7 @@
 use crate::{
     char_image,
     config::Config,
-    js_interop::{self, JS_BRIDGE},
+    js_interop::{self, TouchKind, JS_BRIDGE},
     manager::{
         flake_text_manager::FlakeCharLine, snowflake_manager::SnowflakeManager,
         ui_text_manager::UiTextManager,
@@ -103,7 +103,7 @@ impl UiState {
         let status_color = ColorPair::new((216, 216, 216, 255), (0, 0, 0, 0)); // gray
         batch.print_color(Point::from_tuple((78, 1)), status, status_color);
         let js_bridge = JS_BRIDGE.lock().unwrap();
-        if js_bridge.scale > 0.0 {
+        if js_bridge.scale > 0.0 && (js_bridge.scale - 1.0).abs() > 0.00001 {
             let scale = &format!("Scale: {:.2}", js_bridge.scale);
             batch.print_color(Point::from_tuple((78, 2)), scale, status_color);
         }
@@ -182,17 +182,7 @@ impl UiState {
 
         // Start solver via mouse click
         if INPUT.lock().is_mouse_button_pressed(0) && self.solve_stream.is_none() {
-            self.ui_text_manager.clear();
-            self.solve_state = SolveState::Solving;
-            let runner: Box<dyn SolutionRunner<LocalSyncStream>> =
-                match JS_BRIDGE.lock().unwrap().worker_wrapper {
-                    Some(_) => Box::new(WasmRunner {}),
-                    None => Box::new(ThreadSolutionRunner {}),
-                };
-            self.solve_stream = Some(runner.run(
-                YearDay { year: 2022, day: 1 },
-                aoc::core::solution_runner::Input::Default,
-            ));
+            self.start_solving_solutions();
         }
 
         // Handle keyboard events from JS
@@ -216,10 +206,43 @@ impl UiState {
                 }
             }
         }
+
+        let mouse_pos = INPUT.lock().mouse_pixel_pos();
+        match mouse_pos {
+            (x, y) if x <= 0.0 && y <= 0.0 => (),
+            (x, y) => self.config.borrow_mut().mouse = (x as f32, y as f32),
+        }
+        let js_unhandled_touches = JS_BRIDGE
+            .lock()
+            .unwrap()
+            .unhandled_touches
+            .drain(..)
+            .collect_vec();
+        for (p, kind) in js_unhandled_touches {
+            self.config.borrow_mut().mouse = (p[0], p[1]);
+            if let TouchKind::End = kind {
+                if self.solve_stream.is_none() {
+                    self.start_solving_solutions();
+                }
+            }
+        }
+    }
+
+    fn start_solving_solutions(&mut self) {
+        self.ui_text_manager.clear();
+        self.solve_state = SolveState::Solving;
+        let runner: Box<dyn SolutionRunner<LocalSyncStream>> =
+            match JS_BRIDGE.lock().unwrap().worker_wrapper {
+                Some(_) => Box::new(WasmRunner {}),
+                None => Box::new(ThreadSolutionRunner {}),
+            };
+        self.solve_stream = Some(runner.run(
+            YearDay { year: 2022, day: 1 },
+            aoc::core::solution_runner::Input::Default,
+        ));
     }
 
     fn handle_window_resize(&mut self, event: &BEvent, new_size: Point) {
-        println!("{:?}", event);
         let Point {
             x: width_pixels,
             y: height_pixels,
