@@ -30,7 +30,7 @@ impl Solution for Day24 {
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
         let map = parse_map(ctx)?;
-        let time = bfs(&map, &map.start, &map.goal, 0, &mut HashMap::new())
+        let time = traverse(&map, &map.start, &map.goal, 0, &mut HashMap::new())
             .ok_or("could not find path")?;
         Ok(time.to_string())
     }
@@ -41,17 +41,17 @@ impl Solution for Day24 {
         let err = "could not find path";
         let mut blizzards_at = HashMap::new();
         ctx.progress(0.01);
-        let time = bfs(&map, &map.start, &map.goal, 0, &mut blizzards_at).ok_or(err)?;
+        let time = traverse(&map, &map.start, &map.goal, 0, &mut blizzards_at).ok_or(err)?;
         ctx.progress(0.3333);
-        let time = bfs(&map, &map.goal, &map.start, time, &mut blizzards_at).ok_or(err)?;
+        let time = traverse(&map, &map.goal, &map.start, time, &mut blizzards_at).ok_or(err)?;
         ctx.progress(0.6666);
-        let time = bfs(&map, &map.start, &map.goal, time, &mut blizzards_at).ok_or(err)?;
+        let time = traverse(&map, &map.start, &map.goal, time, &mut blizzards_at).ok_or(err)?;
 
         Ok(time.to_string())
     }
 }
 
-fn bfs(
+fn traverse(
     map: &Map,
     start: &Point,
     goal: &Point,
@@ -60,7 +60,7 @@ fn bfs(
 ) -> Option<i32> {
     blizzards_at.insert(0, map.starting_blizzards.clone());
     let mut queue = PriorityQueue::new();
-    queue.push((elapsed, *start), -map.start.manhattan(&map.goal));
+    queue.push((elapsed, *start), 0);
 
     while let Some(((time, pos), _priority)) = queue.pop() {
         if pos == *goal {
