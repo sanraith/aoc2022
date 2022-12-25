@@ -98,18 +98,16 @@ impl UiState {
         batch.print_color_centered(
             2,
             "*** Advent of Code 2022 ***",
-            // ColorPair::new((255, 255, 255, 255), (0, 0, 0, 0)), // white
-            // ColorPair::new((127, 189, 57, 255), (0, 0, 0, 0)), // yellow
             ColorPair::new((0, 204, 0, 255), (0, 0, 0, 0)), // AOC bright green
         );
-        let status = format!("FPS: {: >6}", ctx.fps as i32);
+        let status = format!("FPS: {: >3}", ctx.fps as i32);
         let status_color = ColorPair::new((216, 216, 216, 255), (0, 0, 0, 0)); // gray
-        batch.print_color(Point::from_tuple((78, 1)), status, status_color);
-        let js_bridge = JS_BRIDGE.lock().unwrap();
-        if js_bridge.scale > 0.0 && (js_bridge.scale - 1.0).abs() > 0.00001 {
-            let scale = &format!("Scale: {:.2}", js_bridge.scale);
-            batch.print_color(Point::from_tuple((78, 2)), scale, status_color);
-        }
+        batch.print_color_right(Point::from_tuple((89, 2)), status, status_color);
+        // let js_bridge = JS_BRIDGE.lock().unwrap();
+        // if js_bridge.scale > 0.0 && (js_bridge.scale - 1.0).abs() > 0.00001 {
+        //     let scale = &format!("Scale: {:.2}", js_bridge.scale);
+        //     batch.print_color(Point::from_tuple((78, 2)), scale, status_color);
+        // }
 
         // Print start button
         if let SolveState::NotSolved = self.solve_state {

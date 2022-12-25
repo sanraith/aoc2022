@@ -14,7 +14,7 @@ use crate::{
     state::BG_COLOR,
     util::distance2d_pythagoras_f32,
 };
-use aoc::{core::solution_runner::SolveProgress, util::fmt_duration_s};
+use aoc::{core::solution_runner::SolveProgress, util::fmt_duration_wasm};
 use bracket_terminal::prelude::*;
 use itertools::Itertools;
 use rand::Rng;
@@ -27,7 +27,7 @@ use std::{
 #[allow(dead_code)]
 static ROW_COUNT: usize = 45;
 static COLUMN_WIDTH: usize = 29;
-static TIME_PER_CHAR: f32 = 20.0;
+static TIME_PER_CHAR: f32 = 25.0;
 // static TIME_PER_CHAR: f32 = 2.0;
 static FLAKE_CHAR_MOVE_TIME: f32 = 2000.0;
 // static FLAKE_CHAR_MOVE_TIME: f32 = 10.0;
@@ -263,7 +263,7 @@ impl UiTextManager {
                     },
                     pack.part.unwrap(),
                     pack.value * 100.0,
-                    format!("({})", fmt_duration_s(&pack.duration)),
+                    format!("({})", fmt_duration_wasm(&pack.duration)),
                 );
                 self.add_typed_line(
                     line,
@@ -312,7 +312,7 @@ impl UiTextManager {
             SolveProgress::ErrorResult(_) => (),
             SolveProgress::Done(pack) => {
                 self.add_typed_line(
-                    format!("({})", fmt_duration_s(&pack.duration)),
+                    format!("({})", fmt_duration_wasm(&pack.duration)),
                     pack.year_day.day,
                     Some(3),
                     (100, 100, 100, 255),
