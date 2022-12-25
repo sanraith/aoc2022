@@ -10,8 +10,8 @@ impl Solution for Day25 {
     }
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
-        let numbers = ctx.input_values::<Snafu>()?;
-        let sum = numbers
+        let snafu_numbers = ctx.input_values::<Snafu>()?;
+        let sum = snafu_numbers
             .into_iter()
             .reduce(|a, x| a + x)
             .ok_or("empty input")?;
@@ -26,7 +26,7 @@ impl Solution for Day25 {
 
 #[derive(Constructor, Add)]
 struct Snafu {
-    dec_value: i32,
+    dec_value: i64,
 }
 impl FromStr for Snafu {
     type Err = String;
@@ -34,7 +34,7 @@ impl FromStr for Snafu {
         let map = HashMap::from([('0', 0), ('1', 1), ('2', 2), ('-', -1), ('=', -2)]);
         let mut dec_value = 0;
         for (i, c) in s.chars().rev().enumerate() {
-            dec_value += map.get(&c).ok_or("invalid snafu character")? * (5 as i32).pow(i as u32)
+            dec_value += map.get(&c).ok_or("invalid snafu character")? * (5 as i64).pow(i as u32)
         }
 
         Ok(Snafu { dec_value })
@@ -43,24 +43,22 @@ impl FromStr for Snafu {
 impl ToString for Snafu {
     fn to_string(&self) -> String {
         let map = HashMap::from([(0, '0'), (1, '1'), (2, '2'), (3, '='), (4, '-')]);
-        let mut out = Vec::<char>::new();
+        let mut out = Vec::new();
         let mut remaining = self.dec_value;
-        let mut power = 0;
-        let mut carry = 0;
 
-        for power in 1..10 {
-            let v = remaining % (5 as i32).pow(power); // todo
-            match v {
-                _ => _ = *map.get(&(v as usize)).unwrap(),
-                0 | 1 | 2 => carry = 0,
-                3 | 4 => carry = 1,
-                // _ => panic!(),
+        while remaining > 0 {
+            let digit_value = remaining % 5;
+            match map.get(&digit_value) {
+                Some(digit) => out.push(*digit),
+                None => out.push('?'),
             };
-            // out.push(c);
-            // remaining -= v * (5 as i32).pow(power);
-        }
 
-        println!("{}", power);
+            let carry = match digit_value {
+                3 | 4 => 1,
+                _ => 0,
+            };
+            remaining = remaining / 5 + carry;
+        }
 
         out.iter().rev().collect::<String>()
     }
