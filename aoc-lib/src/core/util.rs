@@ -22,7 +22,7 @@ pub fn day_str(day: u32) -> String {
     format!("{:0>2}", day)
 }
 
-pub fn fmt_duration_s(d: &Duration) -> String {
+pub fn fmt_duration_wasm(d: &Duration) -> String {
     let scales = [
         (60_000_000, "min", 1),
         (1_000_000, "s", 2),
@@ -38,7 +38,7 @@ pub fn fmt_duration_s(d: &Duration) -> String {
         }
     }
 
-    return "0 ms".to_owned();
+    return "1 ms".to_owned();
 }
 
 pub fn fmt_duration(d: &Duration) -> String {

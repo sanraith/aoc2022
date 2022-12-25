@@ -50,3 +50,5 @@ The repo includes a Javascript + WASM based web runner to run solutions in the b
 
 - Advent of Code: <https://adventofcode.com>
 - Favicon: <https://iconarchive.com/show/simple-christmas-icons-by-gpritiranjan/christmas-tree-icon.html>
+- Mountain ASCII art: <https://www.asciiart.eu/nature/mountains>
+- Hot air ballon ASCII art: <http://www.heartnsoul.com/ascii_art/hot_air_balloons.txt>

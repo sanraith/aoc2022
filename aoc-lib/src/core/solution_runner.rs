@@ -165,7 +165,7 @@ fn close<T: SyncStream>(tx: &Arc<Mutex<T>>, day: YearDay, start: SystemTime) {
         year_day: day,
         part: None,
         value: (),
-        duration: start.elapsed().unwrap_or_default(),
+        duration: SystemTime::now().duration_since(start).unwrap_or_default(),
     }));
     tx.close();
 }

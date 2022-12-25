@@ -72,7 +72,7 @@ function handleTouch(rust, event) {
     let y = touch.pageY - rect.top;
 
     rust.push_touch_event(x, y, event.type);
-    if (ongoing_touches.size < 2) {
+    if (ongoing_touches.size < 2 && event.type === 'touchmove') {
         event.preventDefault();
     }
 }
