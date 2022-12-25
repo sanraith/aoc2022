@@ -41,6 +41,7 @@ pub struct UiState {
     solve_stream: Option<Arc<Mutex<LocalSyncStream>>>,
     ui_text_manager: UiTextManager,
     solve_state: SolveState,
+    touch_mode: bool,
 }
 impl GameState for UiState {
     fn tick(&mut self, ctx: &mut BTerm) {
@@ -91,6 +92,7 @@ impl UiState {
             solve_stream: None,
             ui_text_manager: UiTextManager::new(config, snowflake_manager, Point::new(1, 5)),
             solve_state: SolveState::NotSolved,
+            touch_mode: false,
         }
     }
 
@@ -193,6 +195,7 @@ impl UiState {
 
         // Start solver via mouse click
         if INPUT.lock().is_mouse_button_pressed(0) && self.solve_stream.is_none() {
+            self.touch_mode = false;
             self.start_solving_solutions();
         }
 
@@ -218,23 +221,27 @@ impl UiState {
             }
         }
 
-        let mouse_pos = INPUT.lock().mouse_pixel_pos();
-        match mouse_pos {
-            (x, y) if x <= 0.0 && y <= 0.0 => (),
-            (x, y) => self.config.borrow_mut().mouse = (x as f32, y as f32),
-        }
         let js_unhandled_touches = JS_BRIDGE
             .lock()
             .unwrap()
             .unhandled_touches
             .drain(..)
             .collect_vec();
-        for (p, kind) in js_unhandled_touches {
+        for (p, kind) in &js_unhandled_touches {
+            self.touch_mode = true;
             self.config.borrow_mut().mouse = (p[0], p[1]);
             if let TouchKind::End = kind {
                 if self.solve_stream.is_none() {
                     self.start_solving_solutions();
                 }
+            }
+        }
+
+        if !self.touch_mode {
+            let mouse_pos = INPUT.lock().mouse_pixel_pos();
+            match mouse_pos {
+                (x, y) if x <= 0.0 && y <= 0.0 => (),
+                (x, y) => self.config.borrow_mut().mouse = (x as f32, y as f32),
             }
         }
     }
