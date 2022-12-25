@@ -242,7 +242,7 @@ impl UiState {
         ));
     }
 
-    fn handle_window_resize(&mut self, event: &BEvent, new_size: Point) {
+    fn handle_window_resize(&mut self, _event: &BEvent, new_size: Point) {
         let Point {
             x: width_pixels,
             y: height_pixels,
@@ -309,11 +309,7 @@ impl UiState {
         }
 
         // Start next day if there are more days to solve
-        if let Some(mut next_day) = next_year {
-            // TODO remove if d16 implementation is faster
-            if next_day.day == 16 {
-                next_day.day = 17;
-            }
+        if let Some(next_day) = next_year {
             let runner: Box<dyn SolutionRunner<LocalSyncStream>> =
                 match JS_BRIDGE.lock().unwrap().worker_wrapper {
                     Some(_) => Box::new(WasmRunner {}),
