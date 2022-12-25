@@ -1,14 +1,26 @@
 use super::{flake_text_manager::FlakeCharLine, snowflake_manager::SnowflakeManager};
 use crate::{
-    animation::{ease::EaseType, typed_line_animation::TypedLineAnimation},
+    animation::{
+        animated_item::AnimatedItem, animator::AnimationState, animator_group::AnimatorGroup,
+        ease::EaseType, simple_animator::SimpleAnimator,
+        snowflake_fall_animator::SnowflakeFallAnimator, transition_animator::TransitionAnimator,
+        typed_line_animation::TypedLineAnimation,
+    },
     config::Config,
-    drawing::drawing_base::DrawingBase,
+    drawing::{
+        balloon::Balloon,
+        drawing_base::{Drawable, DrawingBase},
+    },
     state::BG_COLOR,
     util::distance2d_pythagoras_f32,
 };
 use aoc::{core::solution_runner::SolveProgress, util::fmt_duration_s};
-use bracket_terminal::prelude::{BTerm, DrawBatch, Point, PointF};
+use bracket_terminal::prelude::{
+    BTerm, DrawBatch, Point, PointF, BLUE, CORAL, CYAN, GOLD, GREEN, LIME, MAGENTA, ORANGE, PINK,
+    RED, SILVER, TEAL, YELLOW,
+};
 use itertools::Itertools;
+use rand::Rng;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
@@ -46,6 +58,7 @@ pub struct UiTextManager {
     typed_lines: HashMap<u32, Vec<Option<TypedLineAnimation>>>,
     snowflake_manager: Rc<RefCell<SnowflakeManager>>,
     draw_queue: VecDeque<QueueItem>,
+    balloons: Vec<AnimatedItem<Balloon>>,
     speed: f32,
 }
 impl UiTextManager {
@@ -54,15 +67,19 @@ impl UiTextManager {
         snowflake_manager: Rc<RefCell<SnowflakeManager>>,
         top_left: Point,
     ) -> Self {
-        UiTextManager {
+        let mut manager = UiTextManager {
             _config: config,
             top_left,
             snowflake_manager,
             draw_queue: VecDeque::new(),
             snowy_lines: Vec::new(),
             typed_lines: HashMap::new(),
+            balloons: Vec::new(),
             speed: 1.0,
-        }
+        };
+
+        manager.draw_mountain();
+        manager
     }
 
     pub fn clear(&mut self) {
@@ -125,6 +142,65 @@ impl UiTextManager {
                 }
             }
             None => (),
+        }
+
+        if self.balloons.len() == 0 || self.balloons.last().unwrap().item.base.pos.x > 72.0 {
+            let mut rng = rand::thread_rng();
+            let colors = [
+                RED, ORANGE, YELLOW, GREEN, CYAN, MAGENTA, GOLD, LIME, CORAL, PINK,
+            ]
+            .into_iter()
+            .map(|x| (x.0, x.1, x.2, 255))
+            .collect_vec();
+            let balloon = Balloon {
+                base: DrawingBase {
+                    pos: PointF::new(rng.gen_range(66.0..67.0), rng.gen_range(41.0..42.0)),
+                    scale: 0.20,
+                    color: colors[rng.gen_range(0..colors.len()) as usize],
+                    opaqueness: 0.0,
+                    ..Default::default()
+                },
+            };
+            let nop = SimpleAnimator::<Balloon, _>::new(|_, _| AnimationState::Completed);
+            let fade_in = SimpleAnimator::<Balloon, _>::new(|_, target| {
+                target.base.opaqueness = 1.0;
+                AnimationState::Completed
+            });
+            let transition =
+                TransitionAnimator::new(&balloon, 250.0, EaseType::Linear, nop, fade_in);
+            let fall_animator = SnowflakeFallAnimator {
+                d_sin_y: rng.gen_range(0.2..0.7),
+                v_sin_y: rng.gen_range(0.2..0.5),
+                vx: 1.0,
+                vy: -0.1,
+                v_rot: 0.0,
+                max_x: 1000 as f32,
+                max_y: 1000 as f32 + 1.0,
+                ..Default::default()
+            };
+
+            let balloon_item = AnimatedItem::<Balloon> {
+                item: balloon,
+                animators: vec![Box::from(transition), Box::from(fall_animator)],
+            };
+            self.balloons.push(balloon_item);
+        }
+
+        for balloon in self.balloons.iter_mut() {
+            balloon
+                .animators
+                .iter_mut()
+                .for_each(|a| a.tick(ctx, &mut balloon.item));
+
+            if let Some(pos) = balloon
+                .animators
+                .iter()
+                .position(|a| *a.state() == AnimationState::Completed)
+            {
+                balloon.animators.swap_remove(pos);
+            }
+
+            balloon.item.draw(ctx, fancy_batch);
         }
     }
 
