@@ -25,3 +25,4 @@ pub mod day21_test;
 pub mod day22_test;
 pub mod day23_test;
 pub mod day24_test;
+pub mod day25_test;
