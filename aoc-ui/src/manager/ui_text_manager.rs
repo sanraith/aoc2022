@@ -200,6 +200,11 @@ impl UiTextManager {
             };
             self.balloons.push(balloon_item);
         }
+
+        while let Some(pos) = self.balloons.iter().position(|b| b.item.base.pos.x > 100.0) {
+            self.balloons.remove(pos);
+        }
+
         for balloon in self.balloons.iter_mut() {
             balloon
                 .animators
@@ -211,7 +216,7 @@ impl UiTextManager {
                 .iter()
                 .position(|a| *a.state() == AnimationState::Completed)
             {
-                balloon.animators.swap_remove(pos);
+                balloon.animators.remove(pos);
             }
 
             balloon.item.draw(ctx, fancy_batch);
