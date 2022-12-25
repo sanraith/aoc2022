@@ -25,6 +25,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+pub static BG_COLOR: (u8, u8, u8, u8) = (15, 15, 35, 255);
+
 enum SolveState {
     NotSolved,
     Solving,
@@ -43,7 +45,7 @@ pub struct UiState {
 impl GameState for UiState {
     fn tick(&mut self, ctx: &mut BTerm) {
         self.total_time += ctx.frame_time_ms;
-        let bg_color = (15, 15, 35, 255);
+        let bg_color = BG_COLOR;
         ctx.cls_bg(bg_color);
         ctx.screen_burn_color(RGB::named(CYAN));
 
@@ -62,7 +64,8 @@ impl GameState for UiState {
         self.handle_solution_progress_updates();
         self.handle_flake_text_manager(ctx, &mut fancy_batch);
         self.text_manager.tick(ctx, &mut fancy_batch);
-        self.ui_text_manager.tick(ctx, &mut normal_batch);
+        self.ui_text_manager
+            .tick(ctx, &mut normal_batch, &mut fancy_batch);
         self.print_status(ctx, &mut normal_batch);
 
         fancy_batch.submit(2).expect("Render error");
@@ -173,6 +176,16 @@ impl UiState {
                     pressed: true,
                     ..
                 } => self.text_manager.text.clear(),
+                BEvent::KeyboardInput {
+                    key: VirtualKeyCode::Right,
+                    pressed: true,
+                    ..
+                } => self.ui_text_manager.set_speed(0.01),
+                BEvent::KeyboardInput {
+                    key: VirtualKeyCode::Right,
+                    pressed: false,
+                    ..
+                } => self.ui_text_manager.set_speed(1.0),
                 BEvent::Character { c } if char_image::CHARACTER_IMAGES.contains_key(&c) => {
                     self.text_manager.add_char(c)
                 }
@@ -229,6 +242,10 @@ impl UiState {
     }
 
     fn start_solving_solutions(&mut self) {
+        if self.solve_stream.is_some() {
+            return;
+        }
+
         self.ui_text_manager.clear();
         self.solve_state = SolveState::Solving;
         let runner: Box<dyn SolutionRunner<LocalSyncStream>> =

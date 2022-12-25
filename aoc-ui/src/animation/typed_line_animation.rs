@@ -11,6 +11,7 @@ pub struct TypedLineAnimation {
     pub anim_length_ms: f32,
     pub ease_type: EaseType,
     pub elapsed: f32,
+    pub bg_color: (u8, u8, u8, u8),
 }
 
 impl TypedLineAnimation {
@@ -19,6 +20,7 @@ impl TypedLineAnimation {
         text: String,
         anim_length_ms: f32,
         ease_type: EaseType,
+        bg_color: (u8, u8, u8, u8),
     ) -> TypedLineAnimation {
         TypedLineAnimation {
             base,
@@ -26,6 +28,7 @@ impl TypedLineAnimation {
             anim_length_ms,
             ease_type,
             elapsed: 0.0,
+            bg_color,
         }
     }
 
@@ -46,7 +49,7 @@ impl TypedLineAnimation {
         batch.print_color(
             Point::new(self.base.pos.x as i32, self.base.pos.y as i32),
             drawn_text,
-            ColorPair::new(self.base.color, (0, 0, 0, 0)),
+            ColorPair::new(self.base.color, self.bg_color),
         );
     }
 

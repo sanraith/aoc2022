@@ -3,6 +3,7 @@ use crate::{
     animation::{ease::EaseType, typed_line_animation::TypedLineAnimation},
     config::Config,
     drawing::drawing_base::DrawingBase,
+    state::BG_COLOR,
     util::distance2d_pythagoras_f32,
 };
 use aoc::{core::solution_runner::SolveProgress, util::fmt_duration_s};
@@ -18,6 +19,7 @@ use std::{
 static ROW_COUNT: usize = 45;
 static COLUMN_WIDTH: usize = 29;
 static TIME_PER_CHAR: f32 = 20.0;
+// static TIME_PER_CHAR: f32 = 2.0;
 static FLAKE_CHAR_MOVE_TIME: f32 = 2000.0;
 // static FLAKE_CHAR_MOVE_TIME: f32 = 10.0;
 static FLAKE_CHAR_FADE_OUT_TIME: f32 = 1000.0;
@@ -44,6 +46,7 @@ pub struct UiTextManager {
     typed_lines: HashMap<u32, Vec<Option<TypedLineAnimation>>>,
     snowflake_manager: Rc<RefCell<SnowflakeManager>>,
     draw_queue: VecDeque<QueueItem>,
+    speed: f32,
 }
 impl UiTextManager {
     pub fn new(
@@ -58,19 +61,21 @@ impl UiTextManager {
             draw_queue: VecDeque::new(),
             snowy_lines: Vec::new(),
             typed_lines: HashMap::new(),
+            speed: 1.0,
         }
     }
 
     pub fn clear(&mut self) {
         self.snowy_lines.clear();
         for (_, typed_line) in self.typed_lines.iter_mut() {
-            // keep title
-            typed_line[1] = None;
-            typed_line[2] = None;
+            // keep title after clear
+            for i in 1..typed_line.len() {
+                typed_line[i] = None;
+            }
         }
     }
 
-    pub fn tick(&mut self, ctx: &BTerm, batch: &mut DrawBatch) {
+    pub fn tick(&mut self, ctx: &BTerm, batch: &mut DrawBatch, fancy_batch: &mut DrawBatch) {
         for mut dyn_line in self.snowy_lines.iter_mut().collect_vec() {
             handle_snowy_line(
                 &mut self.snowflake_manager.borrow_mut(),
@@ -82,10 +87,10 @@ impl UiTextManager {
         for typed_line in self
             .typed_lines
             .iter_mut()
-            .flat_map(|(_, lines)| lines.iter_mut())
+            .flat_map(|(d, lines)| lines.iter_mut())
         {
             if let Some(l) = typed_line {
-                l.tick(ctx, batch);
+                l.tick(ctx, fancy_batch);
             }
         }
 
@@ -113,7 +118,7 @@ impl UiTextManager {
                 if l.progress() >= 1.0 {
                     self.typed_lines
                         .entry(day)
-                        .or_insert_with(|| Vec::from_iter([None, None, None]))[part] = Some(l);
+                        .or_insert_with(|| Vec::from_iter((0..10).map(|_| None)))[part] = Some(l);
                 } else {
                     self.draw_queue
                         .push_front(QueueItem::TypedLine((day, part, l)));
@@ -136,21 +141,21 @@ impl UiTextManager {
         match progress {
             SolveProgress::Start(day, title) => {
                 self.add_typed_line(
-                    format!("D{: <2} {}", day.day, title),
+                    format!("#{: <2} {}", day.day, title),
                     day.day,
                     Some(0 as u8),
                     TITLE_COLOR,
                     TIME_PER_CHAR,
                 );
                 self.add_typed_line(
-                    "├P1...".to_owned(),
+                    "├Part 1...".to_owned(),
                     day.day,
                     Some(1 as u8),
                     PART_COLOR,
                     TIME_PER_CHAR,
                 );
                 self.add_typed_line(
-                    "└P2...".to_owned(),
+                    "└Part 2...".to_owned(),
                     day.day,
                     Some(2 as u8),
                     PART_COLOR,
@@ -160,15 +165,15 @@ impl UiTextManager {
             SolveProgress::Error(_) => (),
             SolveProgress::Progress(pack) => {
                 let line = format!(
-                    "{}P{} {: >8}► {: >5.2}%",
+                    "{}Part {}► {: >5.2}% {: >8}",
                     if pack.part.unwrap() == 1 {
                         "├"
                     } else {
                         "└"
                     },
                     pack.part.unwrap(),
+                    pack.value * 100.0,
                     format!("({})", fmt_duration_s(&pack.duration)),
-                    pack.value * 100.0
                 );
                 self.add_typed_line(
                     line,
@@ -180,14 +185,14 @@ impl UiTextManager {
             }
             SolveProgress::SuccessResult(pack) => {
                 let line = format!(
-                    "{}P{} {: >8}:",
+                    "{}Part {}:",
                     if pack.part.unwrap() == 1 {
                         "├"
                     } else {
                         "└"
                     },
                     pack.part.unwrap(),
-                    format!("({})", fmt_duration_s(&pack.duration)),
+                    // format!("({})", fmt_duration_s(&pack.duration)),
                 );
                 self.add_typed_line(
                     line,
@@ -201,20 +206,44 @@ impl UiTextManager {
                 let base_pos =
                     self.top_left + Point::new((y / ROW_COUNT) * COLUMN_WIDTH, y % ROW_COUNT);
                 let y = base_pos.y + pack.part.unwrap() as i32;
-                let x = base_pos.x + 14;
+                let x = base_pos.x + 9;
 
                 let mut flake_line = FlakeCharLine::new(
                     PointF::new(x as f32, y as f32),
-                    FLAKE_CHAR_MOVE_TIME,
-                    FLAKE_CHAR_FADE_OUT_TIME,
-                    FLAKE_CHAR_FADE_IN_TIME,
+                    FLAKE_CHAR_MOVE_TIME * self.speed,
+                    FLAKE_CHAR_FADE_OUT_TIME * self.speed,
+                    FLAKE_CHAR_FADE_IN_TIME * self.speed,
                     SOLUTION_COLOR,
                 );
+
+                if pack.year_day.day == 25 && pack.part.unwrap() == 2 {
+                    flake_line = FlakeCharLine::new(
+                        PointF::new(x as f32, y as f32),
+                        FLAKE_CHAR_MOVE_TIME * self.speed * 1.5,
+                        FLAKE_CHAR_FADE_OUT_TIME * self.speed,
+                        FLAKE_CHAR_FADE_IN_TIME * self.speed,
+                        SOLUTION_COLOR,
+                    );
+                    flake_line.flake_count_multiplier = 6;
+                }
+
                 pack.value.chars().for_each(|c| flake_line.add_char(c));
                 self.draw_queue.push_back(QueueItem::SnowyLine(flake_line));
             }
             SolveProgress::ErrorResult(_) => (),
-            SolveProgress::Done(_) => (),
+            SolveProgress::Done(pack) => {
+                self.add_typed_line(
+                    format!("({})", fmt_duration_s(&pack.duration)),
+                    pack.year_day.day,
+                    Some(3),
+                    (100, 100, 100, 255),
+                    TIME_PER_CHAR,
+                );
+
+                if pack.year_day.day == 25 {
+                    self.draw_mountain();
+                }
+            }
         }
     }
 
@@ -224,7 +253,7 @@ impl UiTextManager {
         day: u32,
         part: Option<u8>,
         color: (u8, u8, u8, u8),
-        speed: f32,
+        base_speed: f32,
     ) {
         let part = part.unwrap() as usize;
         let y = (day - 1) as usize * 5;
@@ -254,10 +283,66 @@ impl UiTextManager {
                     ..Default::default()
                 },
                 line,
-                len * speed,
+                len * base_speed * self.speed,
                 EaseType::Linear,
+                (BG_COLOR.0, BG_COLOR.1, BG_COLOR.2, 50),
             ),
         )));
+    }
+
+    pub fn set_speed(&mut self, speed: f32) {
+        self.speed = speed;
+    }
+
+    pub fn draw_mountain(&mut self) {
+        let mountain = r"
+           .-.                 _    
+          /   \              _/ \             
+      .--'\/\_ \            /    \       ___
+    _/ ^      \/\'__        /\/\  /\  __/   \  
+   /    .'   _/  /  \     /    \/  \/ .`'\_/\    
+  / :' __  ^/  ^/    `--./.'  ^  `-.\ _    _:\ _
+ /\  _/  \-' __/.' ^ _   \_   .'\   _/ \ .  __/ \
+/  \/     \ / -.   _/ \ -. `_/   \ /    `._/  ^  \
+   / .-'.--'    . /    `--./ .-'  `-.  `-. `.  -  `.";
+        mountain
+            .lines()
+            .take(9)
+            .chain([vec![' '; 36].into_iter().collect::<String>().as_str()])
+            .enumerate()
+            .for_each(|(y, line)| {
+                let white = ((255 as f32 - y as f32 / 6.0 * 255.0) as u8).max(0);
+                let line = line.chars().take(36).chain([' ']).collect::<String>();
+                let len = line.len();
+                let base_pos = Point::new(53, 40 + y);
+                let color = (
+                    white,
+                    150 + (white as f32 * (105.0 / 255.0)) as u8,
+                    white,
+                    255,
+                );
+                let bg_color = (
+                    BG_COLOR.0,
+                    BG_COLOR.1,
+                    BG_COLOR.2,
+                    (y as f32 / 6.0 * 255.0).min(255.0) as u8,
+                );
+                self.draw_queue.push_back(QueueItem::TypedLine((
+                    26,
+                    y,
+                    TypedLineAnimation::new(
+                        DrawingBase {
+                            pos: PointF::new(base_pos.x as f32, base_pos.y as f32),
+                            color,
+                            ..Default::default()
+                        },
+                        line,
+                        len as f32 * TIME_PER_CHAR * self.speed,
+                        EaseType::EaseInOutCubic,
+                        bg_color,
+                    ),
+                )));
+            });
     }
 }
 

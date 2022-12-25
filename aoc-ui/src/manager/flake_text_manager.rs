@@ -85,6 +85,7 @@ pub struct FlakeCharLine {
     fade_in_time: f32,
     pub text: Vec<FlakeCharacter>,
     color: (u8, u8, u8, u8),
+    pub flake_count_multiplier: i32,
 }
 impl FlakeCharLine {
     pub fn new(
@@ -100,6 +101,7 @@ impl FlakeCharLine {
             fade_out_time,
             fade_in_time,
             color,
+            flake_count_multiplier: 1,
             ..Default::default()
         }
     }
@@ -142,7 +144,13 @@ impl FlakeCharLine {
             x: self.pos.x + self.text.len() as f32,
             y: self.pos.y,
         };
-        let flake_char = FlakeCharacter::new(char, pos, self.color.clone());
+        let mut flake_char = FlakeCharacter::new(char, pos, self.color.clone());
+
+        let items = flake_char.queue.clone();
+        for _ in 0..self.flake_count_multiplier {
+            flake_char.queue.append(&mut items.clone());
+        }
+
         self.text.push(flake_char);
     }
 
