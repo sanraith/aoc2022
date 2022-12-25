@@ -147,7 +147,7 @@ impl FlakeCharLine {
         let mut flake_char = FlakeCharacter::new(char, pos, self.color.clone());
 
         let items = flake_char.queue.clone();
-        for _ in 0..self.flake_count_multiplier {
+        for _ in 0..self.flake_count_multiplier - 1 {
             flake_char.queue.append(&mut items.clone());
         }
 

@@ -254,10 +254,7 @@ impl UiState {
                 None => Box::new(ThreadSolutionRunner {}),
             };
         self.solve_stream = Some(runner.run(
-            YearDay {
-                year: 2022,
-                day: 25,
-            },
+            YearDay { year: 2022, day: 1 },
             aoc::core::solution_runner::Input::Default,
         ));
     }

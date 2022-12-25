@@ -15,10 +15,7 @@ use crate::{
     util::distance2d_pythagoras_f32,
 };
 use aoc::{core::solution_runner::SolveProgress, util::fmt_duration_s};
-use bracket_terminal::prelude::{
-    BTerm, DrawBatch, Point, PointF, BLUE, CORAL, CYAN, GOLD, GREEN, LIME, MAGENTA, ORANGE, PINK,
-    RED, SILVER, TEAL, YELLOW,
-};
+use bracket_terminal::prelude::*;
 use itertools::Itertools;
 use rand::Rng;
 use std::{
@@ -67,7 +64,7 @@ impl UiTextManager {
         snowflake_manager: Rc<RefCell<SnowflakeManager>>,
         top_left: Point,
     ) -> Self {
-        let mut manager = UiTextManager {
+        let manager = UiTextManager {
             _config: config,
             top_left,
             snowflake_manager,
@@ -77,16 +74,13 @@ impl UiTextManager {
             balloons: Vec::new(),
             speed: 1.0,
         };
-
-        manager.draw_mountain();
         manager
     }
 
     pub fn clear(&mut self) {
         self.snowy_lines.clear();
         for (_, typed_line) in self.typed_lines.iter_mut() {
-            // keep title after clear
-            for i in 1..typed_line.len() {
+            for i in 0..typed_line.len() {
                 typed_line[i] = None;
             }
         }
@@ -104,7 +98,7 @@ impl UiTextManager {
         for typed_line in self
             .typed_lines
             .iter_mut()
-            .flat_map(|(d, lines)| lines.iter_mut())
+            .flat_map(|(_, lines)| lines.iter_mut())
         {
             if let Some(l) = typed_line {
                 l.tick(ctx, fancy_batch);
@@ -144,6 +138,22 @@ impl UiTextManager {
             None => (),
         }
 
+        let mut balloons_active = false;
+        if let Some(lines) = self.typed_lines.get(&26) {
+            if let Some(line) = lines.get(9) {
+                if line.is_some() && line.as_ref().unwrap().state() == AnimationState::Completed {
+                    balloons_active = true;
+                }
+            }
+        }
+        if balloons_active {
+            self.handle_balloons(ctx, fancy_batch);
+        } else {
+            self.balloons.clear();
+        }
+    }
+
+    fn handle_balloons(&mut self, ctx: &BTerm, fancy_batch: &mut DrawBatch) {
         if self.balloons.len() == 0 || self.balloons.last().unwrap().item.base.pos.x > 72.0 {
             let mut rng = rand::thread_rng();
             let colors = [
@@ -154,7 +164,7 @@ impl UiTextManager {
             .collect_vec();
             let balloon = Balloon {
                 base: DrawingBase {
-                    pos: PointF::new(rng.gen_range(66.0..67.0), rng.gen_range(41.0..42.0)),
+                    pos: PointF::new(rng.gen_range(66.5..67.5), rng.gen_range(41.0..=41.0)),
                     scale: 0.20,
                     color: colors[rng.gen_range(0..colors.len()) as usize],
                     opaqueness: 0.0,
@@ -162,12 +172,10 @@ impl UiTextManager {
                 },
             };
             let nop = SimpleAnimator::<Balloon, _>::new(|_, _| AnimationState::Completed);
-            let fade_in = SimpleAnimator::<Balloon, _>::new(|_, target| {
+            let faded_in_state = SimpleAnimator::<Balloon, _>::new(|_, target| {
                 target.base.opaqueness = 1.0;
                 AnimationState::Completed
             });
-            let transition =
-                TransitionAnimator::new(&balloon, 250.0, EaseType::Linear, nop, fade_in);
             let fall_animator = SnowflakeFallAnimator {
                 d_sin_y: rng.gen_range(0.2..0.7),
                 v_sin_y: rng.gen_range(0.2..0.5),
@@ -178,14 +186,20 @@ impl UiTextManager {
                 max_y: 1000 as f32 + 1.0,
                 ..Default::default()
             };
+            let start_transition = TransitionAnimator::new(
+                &balloon,
+                500.0,
+                EaseType::EaseInOutQuad,
+                nop,
+                AnimatorGroup::new(vec![Box::from(faded_in_state), Box::from(fall_animator)]),
+            );
 
             let balloon_item = AnimatedItem::<Balloon> {
                 item: balloon,
-                animators: vec![Box::from(transition), Box::from(fall_animator)],
+                animators: vec![Box::from(start_transition)],
             };
             self.balloons.push(balloon_item);
         }
-
         for balloon in self.balloons.iter_mut() {
             balloon
                 .animators
@@ -292,17 +306,6 @@ impl UiTextManager {
                     SOLUTION_COLOR,
                 );
 
-                if pack.year_day.day == 25 && pack.part.unwrap() == 2 {
-                    flake_line = FlakeCharLine::new(
-                        PointF::new(x as f32, y as f32),
-                        FLAKE_CHAR_MOVE_TIME * self.speed * 1.5,
-                        FLAKE_CHAR_FADE_OUT_TIME * self.speed,
-                        FLAKE_CHAR_FADE_IN_TIME * self.speed,
-                        SOLUTION_COLOR,
-                    );
-                    flake_line.flake_count_multiplier = 6;
-                }
-
                 pack.value.chars().for_each(|c| flake_line.add_char(c));
                 self.draw_queue.push_back(QueueItem::SnowyLine(flake_line));
             }
@@ -372,22 +375,23 @@ impl UiTextManager {
 
     pub fn draw_mountain(&mut self) {
         let mountain = r"
-           .-.                 _    
-          /   \              _/ \             
-      .--'\/\_ \            /    \       ___
-    _/ ^      \/\'__        /\/\  /\  __/   \  
-   /    .'   _/  /  \     /    \/  \/ .`'\_/\    
-  / :' __  ^/  ^/    `--./.'  ^  `-.\ _    _:\ _
- /\  _/  \-' __/.' ^ _   \_   .'\   _/ \ .  __/ \
-/  \/     \ / -.   _/ \ -. `_/   \ /    `._/  ^  \
-   / .-'.--'    . /    `--./ .-'  `-.  `-. `.  -  `.";
+           .-.                      
+          /   \                     
+      .--'\/\_ \                    
+    _/ ^      \/\'__                
+   /    .'   _/  /  \               
+  / :' __  ^/  ^/    `--.           
+ /\  _/  \-' __/.' ^ _   \_   .'\   
+/  \/     \ / -.   _/ \ -. `_/   \/\";
         mountain
             .lines()
             .take(9)
             .chain([vec![' '; 36].into_iter().collect::<String>().as_str()])
             .enumerate()
             .for_each(|(y, line)| {
-                let white = ((255 as f32 - y as f32 / 6.0 * 255.0) as u8).max(0);
+                let white = ((350 as f32 - y as f32 / 6.0 * 255.0) as u8)
+                    .min(255)
+                    .max(0);
                 let line = line.chars().take(36).chain([' ']).collect::<String>();
                 let len = line.len();
                 let base_pos = Point::new(53, 40 + y);
