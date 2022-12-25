@@ -25,5 +25,5 @@ Valve JJ has flow rate=21; tunnel leads to valve II"#,
 fn puzzle_input() {
     let (mut day, ctx) = setup_from_file::<Day16>();
     assert_result(day.part1(&ctx), "2124", "solve part 1");
-    // assert_result(day.part2(&ctx), "2775", "solve part 2"); // too slow
+    assert_result(day.part2(&ctx), "2775", "solve part 2"); // too slow
 }

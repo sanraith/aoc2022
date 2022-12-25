@@ -1,15 +1,7 @@
-use crate::{
-    helpers::{is_wasm, re_capture_groups},
-    solution::*,
-    util::GenericResult,
-};
+use crate::{helpers::re_capture_groups, solution::*, util::GenericResult};
 use itertools::Itertools;
-use rayon::prelude::*;
 use regex::Regex;
-use std::{
-    collections::{HashSet, VecDeque},
-    sync::Mutex,
-};
+use std::collections::{HashSet, VecDeque};
 
 #[derive(Default)]
 pub struct Day16;
@@ -20,237 +12,126 @@ impl Solution for Day16 {
 
     fn part1(&mut self, ctx: &Context) -> SolutionResult {
         let network = parse_network(ctx)?;
-        let valve_states = &mut &mut vec![false; network.valves.len()];
-        let (released_pressure, ..) =
-            release_pressure(&network, network.start, valve_states, 30, 0, 0, ctx, 0);
+        let routes = find_routes_for(30, &network);
+        let (_, best_pressure) = routes
+            .iter()
+            .sorted_by(|(_, p1), (_, p2)| p2.cmp(&p1))
+            .next()
+            .ok_or("no path found")?;
 
-        Ok(released_pressure.to_string())
+        Ok(best_pressure.to_string())
     }
 
     // This solution is highly inefficient, runs for ~3 minutes on a i7-13700K
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
         let network = parse_network(ctx)?;
-        let agents = vec![
-            AgentTask::Ready(network.start),
-            AgentTask::Ready(network.start),
-        ];
-        let valve_states = &mut vec![false; network.valves.len()];
-        let released_pressure =
-            release_pressure_part2(&network, agents, valve_states, 26, 0, 0, ctx);
+        let routes = find_routes_for(26, &network);
+        let best_pressure = find_best_route_pair_pressure(routes, ctx);
 
-        Ok(released_pressure.to_string())
+        Ok(best_pressure.to_string())
     }
 }
 
-fn release_pressure_part2(
+fn find_best_route_pair_pressure(mut routes: Vec<(HashSet<usize>, i32)>, ctx: &Context) -> i32 {
+    routes.sort_by(|(_, s1), (_, s2)| s2.cmp(&s1));
+    let route_count = routes.len();
+    let mut max = 0;
+    for (a, b) in itertools::iproduct!(0..route_count, 0..route_count).filter(|(a, b)| a != b) {
+        if a % 1000 == 0 && b == 0 {
+            ctx.progress(a as f32 / route_count as f32);
+        }
+
+        let (s1, p1) = &routes[a];
+        let (s2, p2) = &routes[b];
+        let sum = *p1 + *p2;
+        if sum <= max || s1.intersection(s2).next().is_some() {
+            continue;
+        }
+
+        max = sum;
+    }
+
+    max
+}
+
+fn find_routes_for(time: i32, network: &Network) -> Vec<(HashSet<usize>, i32)> {
+    let mut open_valves = vec![false; network.valves.len()];
+    let mut routes = Vec::new();
+
+    find_routes(
+        &network,
+        true,
+        time,
+        network.start,
+        0,
+        &mut open_valves,
+        &mut vec![],
+        &mut routes,
+    );
+
+    routes
+}
+
+fn find_routes(
     network: &Network,
-    agents: Vec<AgentTask>,
-    mut valve_states: &mut Vec<bool>,
-    time_remaining: i32,
-    total_pressure: i32,
-    mut ppm: i32,
-    ctx: &Context,
-) -> i32 {
-    // perform agent actions
-    let mut restore_valve = Vec::new();
-    let agents = agents
-        .into_iter()
-        .map(|a| match a {
-            AgentTask::Ready(_) => a,
-            AgentTask::Open(v, 0) => {
-                valve_states[v] = true;
-                restore_valve.push(v);
-                ppm += network.valves[v].flow_rate;
-                AgentTask::Ready(v)
-            }
-            AgentTask::Open(v, d) => AgentTask::Open(v, d - 1),
-        })
+    start: bool,
+    time: i32,
+    current: usize,
+    mut pressure: i32,
+    valves_open: &mut Vec<bool>,
+    path: &mut Vec<usize>,
+    routes: &mut Vec<(HashSet<usize>, i32)>,
+) {
+    let reachable = network.distance_map[current]
+        .iter()
+        .enumerate()
+        .filter(|(i, d)| !valves_open[*i] && network.good_valves[*i] && d.is_some())
+        .map(|(i, d)| (i, d.unwrap()))
         .collect_vec();
 
-    // collect all valid actions for each agent regardless of each other
-    let mut next_actions: Vec<Vec<AgentTask>> = vec![vec![]; agents.len()];
-    for index in 0..agents.len() {
-        let agent = &agents[index];
-        match agent {
-            AgentTask::Open(v, d) => next_actions[index].push(AgentTask::Open(*v, *d)),
-            AgentTask::Ready(_) => {
-                next_actions[index].append(&mut find_valid_tasks(network, &valve_states, agent))
-            }
-        };
-    }
-
-    // collect task pairs for each agent
-    let mut tasks = Vec::new();
-    if time_remaining > 1 {
-        for a1 in &next_actions[0] {
-            for a2 in &next_actions[1] {
-                match (a1, a2) {
-                    (AgentTask::Open(v1, _), AgentTask::Open(v2, _)) if v1 == v2 => continue,
-                    (AgentTask::Ready(_), AgentTask::Ready(_)) => continue,
-                    (AgentTask::Open(_, _), AgentTask::Ready(_))
-                        if next_actions[1].len() > 0 && tasks.len() > 0 =>
-                    {
-                        continue;
-                    }
-                    (AgentTask::Ready(_), AgentTask::Open(_, _))
-                        if next_actions[0].len() > 0 && tasks.len() > 0 =>
-                    {
-                        continue;
-                    }
-                    _ => tasks.push(vec![a1.clone(), a2.clone()]),
-                }
-            }
-        }
-    }
-
-    // run via rayon at the top level if we are not in a wasm environment
-    let mut max_tp = total_pressure + time_remaining * ppm;
-    let tasks_len = tasks.len() as f32;
-    let tp = match !is_wasm() && time_remaining > 25 {
-        true => {
-            let ctx_mutex = Mutex::new(ctx);
-            tasks
-                .into_iter()
-                .enumerate()
-                .par_bridge()
-                .map(|(index, task)| {
-                    if time_remaining == 26 {
-                        ctx_mutex.lock().unwrap().progress(index as f32 / tasks_len);
-                    }
-                    release_pressure_part2(
-                        network,
-                        task,
-                        &mut valve_states.clone(),
-                        time_remaining - 1,
-                        total_pressure + ppm,
-                        ppm,
-                        ctx,
-                    )
-                })
-                .max()
-        }
-        false => tasks
-            .into_iter()
-            .enumerate()
-            .map(|(index, task)| {
-                if time_remaining == 26 {
-                    ctx.progress(index as f32 / tasks_len);
-                }
-                release_pressure_part2(
-                    network,
-                    task,
-                    &mut valve_states,
-                    time_remaining - 1,
-                    total_pressure + ppm,
-                    ppm,
-                    ctx,
-                )
-            })
-            .max(),
-    };
-    tp.map(|x| max_tp = max_tp.max(x));
-
-    restore_valve.iter().for_each(|&v| valve_states[v] = false);
-    return max_tp;
-}
-
-fn release_pressure(
-    network: &Network,
-    current: usize,
-    valves_open: &mut Vec<bool>,
-    time_remaining: i32,
-    total_pressure: i32,
-    ppm: i32,
-    ctx: &Context,
-    level: i32,
-) -> (i32, Vec<bool>) {
-    if time_remaining <= 0 {
-        return (total_pressure, valves_open.clone());
-    }
-
-    // released pressure by waiting around
-    let mut max_tp = total_pressure + time_remaining * ppm;
-    let mut max_state: Option<Vec<bool>> = None;
-
-    let should_open_valve = !valves_open[current] && network.valves[current].flow_rate > 0;
-    if should_open_valve {
-        // open current valve if there is a point in doing it
+    // do not necessarily have to open the valve at the start, but it takes time if we do
+    if !start {
+        path.push(current);
+        pressure += network.valves[current].flow_rate * time;
+        routes.push((HashSet::from_iter(path.iter().map(|x| *x)), pressure));
+    } else if network.good_valves[current] {
         valves_open[current] = true;
-        let (tp, state) = release_pressure(
+        find_routes(
             network,
+            false,
+            time - 1,
             current,
+            pressure,
             valves_open,
-            time_remaining - 1,
-            total_pressure + 1 * ppm,
-            ppm + network.valves[current].flow_rate,
-            ctx,
-            level + 1,
+            path,
+            routes,
         );
-        if tp > max_tp {
-            max_tp = tp;
-            max_state = Some(state);
-        }
-        max_tp = max_tp.max(tp);
         valves_open[current] = false;
     }
 
-    if !should_open_valve || level == 0 {
-        for (to, distance) in network.distance_map[current]
-            .iter()
-            .enumerate()
-            .filter(|(_, d)| d.is_some())
-        {
-            let distance = distance.unwrap();
-            if distance > time_remaining || valves_open[to] || network.valves[to].flow_rate <= 0 {
-                continue;
-            }
-
-            let (tp, state) = release_pressure(
-                network,
-                to,
-                valves_open,
-                time_remaining - distance,
-                total_pressure + distance * ppm,
-                ppm,
-                ctx,
-                level + 1,
-            );
-            if tp > max_tp {
-                max_tp = tp;
-                max_state = Some(state);
-            }
+    for (next, distance) in reachable.iter() {
+        let next_time = time - distance - 1;
+        if next_time <= 1 {
+            continue;
         }
+
+        valves_open[*next] = true;
+        find_routes(
+            network,
+            false,
+            next_time,
+            *next,
+            pressure,
+            valves_open,
+            path,
+            routes,
+        );
+        valves_open[*next] = false;
     }
 
-    let max_state = match max_state {
-        Some(max_state) => max_state,
-        None => valves_open.clone(),
-    };
-
-    return (max_tp, max_state);
-}
-
-fn find_valid_tasks(
-    network: &Network,
-    valve_states: &Vec<bool>,
-    agent: &AgentTask,
-) -> Vec<AgentTask> {
-    let mut tasks = Vec::new();
-    let current_valve = match agent {
-        AgentTask::Ready(v) => *v,
-        AgentTask::Open(_, _) => panic!("logic error"),
-    };
-
-    for target_valve in
-        (0..network.valves.len()).filter(|&v| !valve_states[v] && network.valves[v].flow_rate > 0)
-    {
-        if let Some(distance) = network.distance_map[current_valve][target_valve] {
-            tasks.push(AgentTask::Open(target_valve, distance))
-        }
+    if !start {
+        path.pop();
     }
-    tasks.push(AgentTask::Ready(current_valve));
-
-    tasks
 }
 
 fn parse_network(ctx: &Context) -> GenericResult<Network> {
@@ -268,6 +149,7 @@ fn parse_network(ctx: &Context) -> GenericResult<Network> {
             ..Default::default()
         });
     }
+    network.good_valves = network.valves.iter().map(|v| v.flow_rate > 0).collect_vec();
 
     for index in 0..network.valves.len() {
         let mut ids = network.valves[index]
@@ -315,31 +197,10 @@ fn create_distance_map(network: &Network) -> Vec<Vec<Option<i32>>> {
     distance_map
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-enum AgentTask {
-    Open(usize, i32),
-    Ready(usize),
-}
-impl PartialOrd for AgentTask {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for AgentTask {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match (self, other) {
-            (AgentTask::Open(v1, d1), AgentTask::Open(v2, d2)) => d1.cmp(d2).then(v1.cmp(v2)),
-            (
-                AgentTask::Open(v1, _) | AgentTask::Ready(v1),
-                AgentTask::Open(v2, _) | AgentTask::Ready(v2),
-            ) => v1.cmp(v2),
-        }
-    }
-}
-
 #[derive(Debug, Default)]
 struct Network {
     valves: Vec<Valve>,
+    good_valves: Vec<bool>,
     start: usize,
     distance_map: Vec<Vec<Option<i32>>>,
 }
