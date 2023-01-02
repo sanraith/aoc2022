@@ -232,6 +232,10 @@ impl UiTextManager {
         self.handle_progress(progress);
     }
 
+    pub fn has_queued_animation(&self) -> bool {
+        self.draw_queue.len() > 0
+    }
+
     fn handle_progress(&mut self, progress: SolveProgress) {
         match progress {
             SolveProgress::Start(day, title) => {
