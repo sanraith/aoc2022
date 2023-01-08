@@ -21,11 +21,7 @@ impl Solution for Day13 {
     }
 
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
-        let dividers = [
-            Packet::List(vec![Packet::List(vec![Packet::Int(2)])]),
-            Packet::List(vec![Packet::List(vec![Packet::Int(6)])]),
-        ];
-
+        let dividers = [2, 6].map(|x| Packet::List(vec![Packet::List(vec![Packet::Int(x)])]));
         let key = parse_packet_pairs(ctx)?
             .into_iter()
             .flat_map(|(a, b)| [a, b])

@@ -247,7 +247,7 @@ impl UiState {
     }
 
     fn start_solving_solutions(&mut self) {
-        if self.solve_stream.is_some() {
+        if self.solve_stream.is_some() || self.ui_text_manager.has_queued_animation() {
             return;
         }
 

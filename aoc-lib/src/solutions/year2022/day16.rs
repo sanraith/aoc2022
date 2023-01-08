@@ -22,7 +22,6 @@ impl Solution for Day16 {
         Ok(best_pressure.to_string())
     }
 
-    // This solution is highly inefficient, runs for ~3 minutes on a i7-13700K
     fn part2(&mut self, ctx: &Context) -> SolutionResult {
         let network = parse_network(ctx)?;
         let routes = find_routes_for(26, &network);
